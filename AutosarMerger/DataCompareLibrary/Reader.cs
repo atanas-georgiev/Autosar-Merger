@@ -1,6 +1,10 @@
 ﻿namespace DataCompareLibrary
 {
+    using System;
+    using System.Collections;
     using System.Collections.Generic;
+    using System.Configuration;
+    using System.IO;
     using System.Xml;
 
     using DataCompareLibrary.Models;
@@ -38,25 +42,106 @@
                 var secondFIle = new XmlDocument();
                 firstFile.Load(this.originalFiles[i]);
                 secondFIle.Load(this.mergeFiles[i]);
-                var writer = System.Xml.XmlWriter.Create(fileName);
+                //var writer = System.Xml.XmlWriter.Create(fileName);
 
-                Diffgram res = diff.Compare(firstFile.DocumentElement, secondFIle.DocumentElement, writer);
+                //diff.Compare(firstFile.DocumentElement, secondFIle.DocumentElement, writer);
 
-                var patchFile = new XmlDocument();
-                patchFile.Load("rte.xml");
+                //writer.Close();
 
-                writer.Close();
+                XmlDiffView dv = new XmlDiffView();
+                //TextWriter aaa = new StringWriter();
 
-                XmlReader reader = XmlReader.Create("tmpFile1.xml");
-                XmlPatch patch = new XmlPatch();
-                patch.Patch(patchFile, reader);
+             //   using (TextWriter aaa = File.CreateText(@"out.html"))
+             //   {
+
+                    //XmlTextReader orig = new XmlTextReader(this.originalFiles[i]);
+                    //XmlTextReader diffGram = new XmlTextReader(fileName);
+                    //dv.Load(orig,diffGram);
+
+                File.Delete(@"test.html");
+                    
+                var res = dv.DifferencesSideBySideAsHtml(this.originalFiles[i], this.mergeFiles[i], @"test.html", false, XmlDiffOptions.IgnoreWhitespace);
+              //  }
+
+                //System.IO.File.WriteAllText(@"test.html", res.ReadToEnd());
 
 
-                writer.Close();
+
             }
 
             this.ParseDiffFiles();
         }
+
+        public static void CopyStream(Stream stream, string destPath)
+        {
+            using (var fileStream = new FileStream(destPath, FileMode.Create, FileAccess.Write))
+            {
+                stream.CopyTo(fileStream);
+            }
+        }
+
+        //private void ApplyDiffgram(XmlNode diffgramParent, XmlDiffViewParentNode sourceParent)
+        //{
+        //    sourceParent.CreateSourceNodesIndex();
+        //    XmlDiffViewNode currentPosition = null;
+
+        //    IEnumerator diffgramChildren = diffgramParent.ChildNodes.GetEnumerator();
+        //    while (diffgramChildren.MoveNext())
+        //    {
+        //        XmlNode diffgramNode = (XmlNode)diffgramChildren.Current;
+        //        if (diffgramNode.NodeType == XmlNodeType.Comment)
+        //            continue;
+
+        //        XmlElement diffgramElement = diffgramChildren.Current as XmlElement;
+
+        //        if (diffgramElement == null)
+        //            throw new Exception("Invalid node in diffgram.");
+
+        //        if (diffgramElement.NamespaceURI != XmlDiff.NamespaceUri)
+        //            throw new Exception("Invalid element in diffgram.");
+
+        //        string matchAttr = diffgramElement.GetAttribute("match");
+        //        XmlDiffPathNodeList matchNodes = null;
+        //        if (matchAttr != string.Empty)
+        //            matchNodes = XmlDiffPath.SelectNodes(_doc, sourceParent, matchAttr);
+
+        //        switch (diffgramElement.LocalName)
+        //        {
+        //            case "node":
+        //                if (matchNodes.Count != 1)
+        //                    throw new Exception("The 'match' attribute of 'node' element must select a single node.");
+        //                matchNodes.MoveNext();
+        //                if (diffgramElement.ChildNodes.Count > 0)
+        //                    ApplyDiffgram(diffgramElement, (XmlDiffViewParentNode)matchNodes.Current);
+        //                currentPosition = matchNodes.Current;
+        //                break;
+        //            case "add":
+        //                if (matchAttr != string.Empty)
+        //                {
+        //                    OnAddMatch(diffgramElement, matchNodes, sourceParent, ref currentPosition);
+        //                }
+        //                else
+        //                {
+        //                    string typeAttr = diffgramElement.GetAttribute("type");
+        //                    if (typeAttr != string.Empty)
+        //                    {
+        //                        OnAddNode(diffgramElement, typeAttr, sourceParent, ref currentPosition);
+        //                    }
+        //                    else
+        //                    {
+        //                        OnAddFragment(diffgramElement, sourceParent, ref currentPosition);
+        //                    }
+        //                }
+        //                break;
+        //            case "remove":
+        //                OnRemove(diffgramElement, matchNodes, sourceParent, ref currentPosition);
+        //                break;
+        //            case "change":
+        //                OnChange(diffgramElement, matchNodes, sourceParent, ref currentPosition);
+        //                break;
+        //        }
+        //    }
+        //}
 
         //private static 
 
