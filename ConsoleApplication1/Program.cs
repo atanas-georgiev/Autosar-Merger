@@ -82,8 +82,8 @@ namespace ConsoleApplication1
             data = new List<DiffData>();
             var comparer = new XmlComparer();
 
-            doc1 = XDocument.Load(@"D:\Systems\35UP_PU1607_I410.03_004.013.004\KSS\Tools\Davinci_Appl\Config\Developer\ComponentTypes\Fscsm.arxml");
-            doc2 = XDocument.Load(@"D:\Systems\35UP_PU1607_I410.05_004.013.008\KSS\Tools\Davinci_Appl\Config\Developer\ComponentTypes\Fscsm.arxml");
+            doc1 = XDocument.Load(@"D:\test\Coding.xml");
+            doc2 = XDocument.Load(@"D:\test1\Coding.xml");
             //doc1.Root.Sort();
             //doc2.Root.Sort();
 
@@ -128,30 +128,40 @@ namespace ConsoleApplication1
                         }
 
                         //XAttribute attr = r.ChangedElement.Attribute("xmlns");
-                        r.ChangedElement.Attribute("xmlns").Remove();
+                        try
+                        {
+                            r.ChangedElement.Attribute("xmlns").Remove();
+                        }
+                        catch (Exception)
+                        {
+                            
+                            // nothing
+                        }
+                        
                         node.ReplaceWith(new XElement(r.ChangedElement));
                       
                         break;
                     case "Removed":
-                        //var node2 = doc1.XPathSelectElement(r.FullXPath);
-
-                        //if (node2 == null)
-                        //{
-                        //    throw new Exception();
-                        //}  
-
-                        //node2.Remove();
+                        var node2 = doc1.XPathSelectElement(r.FullXPath);                        
+                        node2.Remove();
 
                         break;
                     case "Added":
-                        //var node3 = doc1.XPathSelectElement(r.FullXPath);
+                        var path = ConvertAddPath(r.FullXPath);
+                        var node3 = doc1.XPathSelectElement(path.Item1);
 
-                        //if (node3 == null)
-                        //{
-                        //    throw new Exception();
-                        //}  
+                        if (path.Item2 == 0)
+                        {
+                            node3.Add(new XElement(r.Element));
+                        }
+                        else
+                        {
+                            var childrens = node3.Elements().ToArray();
+                            var child = childrens[path.Item2 - 1];
 
-                        //node2.Remove();
+                            child.AddAfterSelf(new XElement(r.Element));
+                        }
+
                         break;
 
                 }
@@ -160,6 +170,33 @@ namespace ConsoleApplication1
 
 
             doc1.Save("result.xml");
+        }
+
+        private static Tuple<string, int> ConvertAddPath(string path)
+        {
+            var fullPath = path.Split('/');
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < fullPath.Length - 1; i++)
+            {
+                if (fullPath[i] != "")
+                {
+                    sb.Append("/");
+                    sb.Append(fullPath[i]);
+                }                
+            }
+
+            var fullIndexes = path.Split(new char[] { '[', ']' });
+            var indexToAdd = int.Parse(fullIndexes[fullIndexes.Length - 2]);
+
+            if (indexToAdd > 0)
+            {
+                indexToAdd -= 1;
+            }
+
+            var result = new Tuple<string, int>(sb.ToString(), indexToAdd);
+
+            return result;
         }
 
         public static XElement RemoveAllNamespaces(XElement e)
