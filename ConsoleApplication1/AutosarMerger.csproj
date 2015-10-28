@@ -42,10 +42,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataStore.cs" />
-    <Compile Include="DiffData.cs" />
+    <Compile Include="Models\DiffDataElement.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="XExtensions.cs" />
+    <Compile Include="XmlCompare\DiffDataGenerator.cs" />
+    <Compile Include="XmlCompare\DiffDataReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -55,6 +57,9 @@
       <Project>{f43eba70-3c26-409c-bd58-2e87a4a8d009}</Project>
       <Name>XmlDiff</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
