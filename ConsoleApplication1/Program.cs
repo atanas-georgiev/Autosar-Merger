@@ -82,8 +82,8 @@ namespace ConsoleApplication1
             data = new List<DiffData>();
             var comparer = new XmlComparer();
 
-            doc1 = XDocument.Load(@"D:\test\Coding.xml");
-            doc2 = XDocument.Load(@"D:\test1\Coding.xml");
+            doc1 = XDocument.Load(@"D:\new.xml");
+            doc2 = XDocument.Load(@"D:\old.xml");
             //doc1.Root.Sort();
             //doc2.Root.Sort();
 
@@ -114,9 +114,30 @@ namespace ConsoleApplication1
             // second part 
 
             var result = DataStore.Load<List<DiffData>>("data.res");
+            var elementsToDelete = new List<XElement>();
 
             foreach (DiffData r in result)
             {
+                try
+                {
+                    r.ChangedElement.Attribute("xmlns").Remove();
+                }
+                catch (Exception)
+                {
+
+                    // nothing
+                }
+
+                try
+                {
+                    r.Element.Attribute("xmlns").Remove();
+                }
+                catch (Exception)
+                {
+
+                    // nothing
+                }
+
                 switch (r.Action)
                 {
                     case "Changed":
@@ -128,22 +149,32 @@ namespace ConsoleApplication1
                         }
 
                         //XAttribute attr = r.ChangedElement.Attribute("xmlns");
-                        try
-                        {
-                            r.ChangedElement.Attribute("xmlns").Remove();
-                        }
-                        catch (Exception)
-                        {
+                        //try
+                        //{
+                        //    r.ChangedElement.Attribute("xmlns").Remove();
+                        //}
+                        //catch (Exception)
+                        //{
                             
-                            // nothing
-                        }
+                        //    // nothing
+                        //}
                         
                         node.ReplaceWith(new XElement(r.ChangedElement));
                       
                         break;
                     case "Removed":
-                        var node2 = doc1.XPathSelectElement(r.FullXPath);                        
-                        node2.Remove();
+                        var node2 = doc1.XPathSelectElement(r.FullXPath);
+                        try
+                        {
+                            elementsToDelete.Add(node2);
+                         //   node2.Remove();
+                        }
+                        catch (Exception)
+                        {
+
+                            var a = 1;
+                        }
+                        
 
                         break;
                     case "Added":
@@ -167,6 +198,11 @@ namespace ConsoleApplication1
                 }
             }
 
+
+            foreach (var del in elementsToDelete)
+            {
+                del.Remove();
+            }
 
 
             doc1.Save("result.xml");
