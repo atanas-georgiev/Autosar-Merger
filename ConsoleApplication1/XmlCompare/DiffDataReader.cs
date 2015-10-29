@@ -23,37 +23,12 @@ namespace ConsoleApplication1.XmlCompare
         public void ApplyDifferencesToFile(string outputFile)
         {
             var outDoc = XDocument.Load(outputFile);
-            var elementsToDelete = new List<XElement>();
+            var elementsToDelete = new List<XElement>();            
 
             foreach (DiffDataElement diff in this.differences)
             {             
                 switch (diff.Action)
                 {
-                    case "Changed":
-                        var node = outDoc.XPathSelectElement(diff.FullXPath);
-
-                        if (node == null)
-                        {
-                            throw new Exception();
-                        }    
-
-                        node.ReplaceWith(new XElement(diff.ChangedElement));
-
-                        break;
-                    case "Removed":
-                        var node2 = outDoc.XPathSelectElement(diff.FullXPath);
-                        try
-                        {
-                            elementsToDelete.Add(node2);
-                        }
-                        catch (Exception)
-                        {
-
-                            var a = 1;
-                        }
-
-
-                        break;
                     case "Added":
                         var path = ConvertAddPath(diff.FullXPath);
                         var node3 = outDoc.XPathSelectElement(path.Item1);
@@ -69,6 +44,33 @@ namespace ConsoleApplication1.XmlCompare
 
                             child.AddAfterSelf(new XElement(diff.Element));
                         }
+
+                        break;
+
+                    case "Changed":
+                        var node = outDoc.XPathSelectElement(diff.FullXPath);
+
+                        if (node == null)
+                        {
+                            throw new Exception();
+                        }    
+
+                        node.ReplaceWith(new XElement(diff.ChangedElement));
+
+                        break;
+
+                    case "Removed":
+                        var node2 = outDoc.XPathSelectElement(diff.FullXPath);
+                        try
+                        {
+                            elementsToDelete.Add(node2);
+                        }
+                        catch (Exception)
+                        {
+
+                            var a = 1;
+                        }
+
 
                         break;
 

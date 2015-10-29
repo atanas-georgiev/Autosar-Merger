@@ -8,11 +8,13 @@
     using System.Xml.XPath;
 
     using ConsoleApplication1.Models;
+    using ConsoleApplication1;
 
     using XmlDiff;
 
     class DiffDataGenerator
     {
+
         private string xsdSchema;
 
         private XDocument firstDoc;
@@ -38,12 +40,102 @@
             this.XsdSchemaValidation();            
         }
 
+        private bool AreSimilarChilds(XElement main, XElement toCompare)
+        {
+            if (main == null || toCompare == null)
+            {
+                return false;
+            }
+
+            if (XNode.DeepEquals(main, toCompare))
+            {
+                return true;
+            }
+
+            var elements = main.Elements().ToList();
+
+            for (int i = 0; i < elements.Count(); i++)
+            {
+                if (XNode.DeepEquals(elements[i], toCompare))
+                {
+                    elements[i] = new XElement(toCompare);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void NormalizeDataDel(List<DiffDataElement> data)
+        {
+            if (data.Count > 1)
+            {
+                for (int i = 1; i < data.Count; i++)
+                {
+                    var 
+                        el =
+                        data[i].Element.DescendantsAndSelf().FirstOrDefault(x => XNode.DeepEquals(x, data[i - 1].ChangedElement));
+                    
+                    if (el != null)
+                    {
+                        el.RemoveAll();
+                        el.Value = data[i - 1].Element.Value;
+
+                        foreach (var attr in data[i - 1].Element.Attributes())
+                        {
+                            el.Add(attr);
+                        }
+
+                        foreach (var elements in data[i - 1].Element.Elements())
+                        {
+                            el.Add(elements);
+                        }
+
+                        data[i - 1].ToBeDeleted = "true";
+                    }
+                }
+
+                data.RemoveAll(x => x.ToBeDeleted != null);
+            }
+        }
+
+        private void NormalizeDataAdd(List<DiffDataElement> data)
+        {
+            if (data.Count > 1)
+            {
+                for (int i = data.Count - 1; i >= 1; i--)
+                {
+                    var el =
+                        data[i].Element.DescendantsAndSelf().FirstOrDefault(x => XNode.DeepEquals(x, data[i - 1].Element));                   
+
+                    if (el != null && data[i].ChangedElement == null)
+                    {
+                        el.RemoveAll();
+                        el.Value = data[i - 1].ChangedElement.Value;
+
+                        foreach (var attr in data[i - 1].ChangedElement.Attributes())
+                        {
+                            el.Add(attr);
+                        }
+
+                        foreach (var elements in data[i - 1].ChangedElement.Elements())
+                        {
+                            el.Add(elements);
+                        }
+                        data.Remove(data[i - 1]);                        
+                    }
+                }                
+            }
+        }
+
         public List<DiffDataElement> GenerateDiffData()
         {
-            var comparer = new XmlComparer();
+            var comparer = new XmlComparer();        
             var diffNode = comparer.Compare(this.firstDoc.Root, this.secondDoc.Root);
             this.diffData = new List<DiffDataElement>();
             this.GetElements(diffNode);
+            this.NormalizeDataDel(this.diffData);
+            this.NormalizeDataAdd(this.diffData);
             return this.diffData;
         }
 
@@ -83,8 +175,10 @@
                                         Action = e.DiffAction.ToString(),
                                         FullXPath = e.Raw.AbsoluteXPath()
                                     };
+
                     try
                     {
+                        data1.Element.Attributes().Where(a => a.IsNamespaceDeclaration).Remove();
                         data1.Element.Attribute("xmlns").Remove();
                     }
                     catch (Exception)
@@ -92,6 +186,7 @@
 
                         // nothing
                     }
+
 
                     this.diffData.Add(data1);
                 }
@@ -108,6 +203,16 @@
                     if (data1.Element == null)
                     {
                         throw new Exception();
+                    }
+
+                    try
+                    {
+                        data1.Element.Attribute("xmlns").Remove();
+                    }
+                    catch (Exception)
+                    {
+
+                        // nothing
                     }
 
                     try

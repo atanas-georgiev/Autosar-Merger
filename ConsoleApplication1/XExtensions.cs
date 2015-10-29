@@ -1,12 +1,34 @@
 ﻿namespace ConsoleApplication1
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
 
     using System.Xml.Linq;
 
     public static class XExtensions
     {
+        public static void Sort(this XElement source, bool bSortAttributes = true)
+        {
+            //Make sure there is a valid source
+            if (source == null) throw new ArgumentNullException("source");
+            //Sort attributes if needed
+            if (bSortAttributes)
+            {
+                List<XAttribute> sortedAttributes = source.Attributes().OrderBy(a => a.ToString()).ToList();
+                sortedAttributes.ForEach(a => a.Remove());
+                sortedAttributes.ForEach(a => source.Add(a));
+            }
+            //Sort the children IF any exist
+            List<XElement> sortedChildren = source.Elements().OrderBy(e => e.Name.ToString()).ToList();
+            if (source.HasElements)
+            {
+                source.RemoveNodes();
+                sortedChildren.ForEach(c => c.Sort());
+                sortedChildren.ForEach(c => source.Add(c));
+            }
+        }
+
         /// <summary> 
         /// Get the absolute XPath to a given XElement
         /// (e.g. "/people/person[6]/name[1]/last[1]").

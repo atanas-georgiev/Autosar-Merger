@@ -37,5 +37,7 @@ namespace ConsoleApplication1.Models
         /// Gets or sets the changed element.
         /// </summary>
         public XElement ChangedElement { get; set; }
+
+        public string ToBeDeleted { get; set; }
     }
 }
