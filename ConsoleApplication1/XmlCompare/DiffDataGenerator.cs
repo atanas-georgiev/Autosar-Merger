@@ -37,7 +37,7 @@
             this.xsdSchema = xsdSchema;
 
             // validate input documents
-            this.XsdSchemaValidation();            
+      //todo: schema validation      this.XsdSchemaValidation();            
         }
 
         private bool AreSimilarChilds(XElement main, XElement toCompare)
@@ -106,9 +106,9 @@
                 for (int i = data.Count - 1; i >= 1; i--)
                 {
                     var el =
-                        data[i].Element.DescendantsAndSelf().FirstOrDefault(x => XNode.DeepEquals(x, data[i - 1].Element));                   
+                        data[i].Element.DescendantsAndSelf().FirstOrDefault(x => XNode.DeepEquals(x, data[i - 1].Element));
 
-                    if (el != null && data[i].ChangedElement == null)
+                    if (el != null && data[i].ChangedElement == null && data[i - 1].ChangedElement != null)
                     {
                         el.RemoveAll();
                         el.Value = data[i - 1].ChangedElement.Value;
@@ -128,6 +128,15 @@
             }
         }
 
+        private void NormalizeDataChanged(List<DiffDataElement> data)
+        {
+            foreach (var d in data.Where(x => x.Action == "Changed").Where(d => XNode.DeepEquals(d.Element, d.ChangedElement)))
+            {
+                d.ToBeDeleted = "true";
+            }
+            data.RemoveAll(x => x.ToBeDeleted != null);
+        }
+
         public List<DiffDataElement> GenerateDiffData()
         {
             var comparer = new XmlComparer();        
@@ -136,6 +145,7 @@
             this.GetElements(diffNode);
             this.NormalizeDataDel(this.diffData);
             this.NormalizeDataAdd(this.diffData);
+            this.NormalizeDataChanged(this.diffData);
             return this.diffData;
         }
 
@@ -176,17 +186,6 @@
                                         FullXPath = e.Raw.AbsoluteXPath()
                                     };
 
-                    try
-                    {
-                        data1.Element.Attributes().Where(a => a.IsNamespaceDeclaration).Remove();
-                        data1.Element.Attribute("xmlns").Remove();
-                    }
-                    catch (Exception)
-                    {
-
-                        // nothing
-                    }
-
 
                     this.diffData.Add(data1);
                 }
@@ -203,26 +202,6 @@
                     if (data1.Element == null)
                     {
                         throw new Exception();
-                    }
-
-                    try
-                    {
-                        data1.Element.Attribute("xmlns").Remove();
-                    }
-                    catch (Exception)
-                    {
-
-                        // nothing
-                    }
-
-                    try
-                    {
-                        data1.ChangedElement.Attribute("xmlns").Remove();
-                    }
-                    catch (Exception)
-                    {
-
-                        // nothing
                     }
 
                     this.diffData.Add(data1);

@@ -25,49 +25,52 @@ namespace ConsoleApplication1
 
         private static void Main(string[] args)
         {
-            //// compare
-            DiffDataGenerator gen = new DiffDataGenerator(@"D:\a.arxml", @"D:\b.arxml", "AUTOSAR.xsd");
-            var res = gen.GenerateDiffData();
-            DataStore.Save(res, "data.res");
+           // //// compare
+           // DiffDataGenerator gen = new DiffDataGenerator(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml",
+           // @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config1\Config\Developer\ComponentTypes\SwcBc.arxml", "AUTOSAR.xsd");
+           // var res = gen.GenerateDiffData();
+           // DataStore.Save(res, "data.res");
 
-            //// merge
+           //// //// merge
            //var result = DataStore.Load<List<DiffDataElement>>("data.res");            
            //DiffDataReader reader = new DiffDataReader(result);
+           //File.Delete(@"d:\a1.arxml");
+           //File.Copy(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml", @"d:\a1.arxml");
            //reader.ApplyDifferencesToFile(@"d:\a1.arxml");
 
-            //Directory.Delete("config", true);
-            //ZipData.UnZip("config.zip", "config");
-            //ZipData.UnZip("config.zip", "result");
-            //ZipData.UnZip("config1.zip", "config1");
-            //string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config", "*.arxml", SearchOption.AllDirectories);
-            //string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config1", "*.arxml", SearchOption.AllDirectories);
-            //string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
+           // Directory.Delete("config", true);
+            ZipData.UnZip("config.zip", "config");
+            ZipData.UnZip("config1.zip", "result");
+            ZipData.UnZip("config1.zip", "config1");
+            string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config", "*.arxml", SearchOption.AllDirectories);
+            string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config1", "*.arxml", SearchOption.AllDirectories);
+            string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
 
             ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
 
-            //for (int i = 0; i < array1.Length; i++)
-            //{
-            //    if (FileCompare(array1[i], array2[i]) == false)
-            //    {
-            //        Console.WriteLine(array3[i]);
-            //        DiffDataGenerator gen = new DiffDataGenerator(array1[i], array2[i], "AUTOSAR.xsd");
-            //        var res = gen.GenerateDiffData();
-            //        File.Delete(array3[i]);
-            //        using (File.Create(array3[i]));
-            //        DataStore.Save(res, array3[i]);                    
-            //    }               
-            //}
+            for (int i = 0; i < array1.Length; i++)
+            {
+                if (FileCompare(array1[i], array2[i]) == false)
+                {
+                    Console.WriteLine(array3[i]);
+                    DiffDataGenerator gen = new DiffDataGenerator(array1[i], array2[i], "AUTOSAR.xsd");
+                    var res = gen.GenerateDiffData();
+                    File.Delete(array3[i]);
+                    using (File.Create(array3[i]));
+                    DataStore.Save(res, array3[i]);                    
+                }               
+            }
 
-            //for (int i = 0; i < array1.Length; i++)
-            //{
-            //    if (FileCompare(array1[i], array2[i]) == false)
-            //    {
-            //        Console.WriteLine("Patching ... "  + array3[i]);
-            //        var result = DataStore.Load<List<DiffDataElement>>(array3[i]);            
-            //        DiffDataReader reader = new DiffDataReader(result);                    
-            //        reader.ApplyDifferencesToFile(array1[i]);                
-            //    }               
-            //}
+            for (int i = 0; i < array1.Length; i++)
+            {
+                if (FileCompare(array1[i], array2[i]) == false)
+                {
+                    Console.WriteLine("Patching ... "  + array3[i]);
+                    var result = DataStore.Load<List<DiffDataElement>>(array3[i]);            
+                    DiffDataReader reader = new DiffDataReader(result);                    
+                    reader.ApplyDifferencesToFile(array1[i]);                
+                }               
+            }
         }
 
         public static void DeleteDirectory(string path, bool recursive)

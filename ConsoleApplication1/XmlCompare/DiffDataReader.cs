@@ -26,7 +26,27 @@ namespace ConsoleApplication1.XmlCompare
             var elementsToDelete = new List<XElement>();            
 
             foreach (DiffDataElement diff in this.differences)
-            {             
+            {
+                try
+                {
+                    diff.Element.Attribute("xmlns").Remove();
+                }
+                catch (Exception)
+                {
+
+                    // nothing
+                }
+
+                try
+                {
+                    diff.ChangedElement.Attribute("xmlns").Remove();
+                }
+                catch (Exception)
+                {
+
+                    // nothing
+                }
+
                 switch (diff.Action)
                 {
                     case "Added":
@@ -71,9 +91,7 @@ namespace ConsoleApplication1.XmlCompare
                             var a = 1;
                         }
 
-
                         break;
-
                 }
             }
 
