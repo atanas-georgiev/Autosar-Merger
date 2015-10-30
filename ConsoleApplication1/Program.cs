@@ -8,28 +8,29 @@ namespace ConsoleApplication1
 {
     using System.IO;
     using System.IO.Compression;
+    using System.Xml;
     using System.Xml.Linq;
 
     using ConsoleApplication1.Data;
-    using ConsoleApplication1.Models;
-    using ConsoleApplication1.XmlCompare;    
+
+    using CustomXMLDiff;
+    using CustomXMLDiff.DiffManager.DiffResult;
 
     static class Program
     {
-        private static List<DiffDataElement> data;
+        //private static List<DiffDataElement> data;
 
-        private static XDocument doc1;
+        //private static XDocument doc1;
 
-        private static XDocument doc2;
+        //private static XDocument doc2;
 
 
         private static void Main(string[] args)
         {
-           // //// compare
-           // DiffDataGenerator gen = new DiffDataGenerator(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml",
-           // @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config1\Config\Developer\ComponentTypes\SwcBc.arxml", "AUTOSAR.xsd");
-           // var res = gen.GenerateDiffData();
-           // DataStore.Save(res, "data.res");
+           //// compare
+           // DiffDataGenerator gen = new DiffDataGenerator(@"D:\test\Com.xml", @"D:\test1\Com.xml", "AUTOSAR.xsd");
+           //var res = gen.GenerateDiffData();
+           //DataStore.Save(res, "data.res");
 
            //// //// merge
            //var result = DataStore.Load<List<DiffDataElement>>("data.res");            
@@ -38,26 +39,38 @@ namespace ConsoleApplication1
            //File.Copy(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml", @"d:\a1.arxml");
            //reader.ApplyDifferencesToFile(@"d:\a1.arxml");
 
-           // Directory.Delete("config", true);
-            ZipData.UnZip("config.zip", "config");
-            ZipData.UnZip("config1.zip", "result");
-            ZipData.UnZip("config1.zip", "config1");
+           //// Directory.Delete("config", true);
+            ZipData.UnZip("config_p1.zip", "config");
+            ZipData.UnZip("config_p2.zip", "result");
+            ZipData.UnZip("config_p2.zip", "config1");
             string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config", "*.arxml", SearchOption.AllDirectories);
             string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config1", "*.arxml", SearchOption.AllDirectories);
             string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
 
-            ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
+           // ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
+
+            
 
             for (int i = 0; i < array1.Length; i++)
             {
                 if (FileCompare(array1[i], array2[i]) == false)
                 {
-                    Console.WriteLine(array3[i]);
-                    DiffDataGenerator gen = new DiffDataGenerator(array1[i], array2[i], "AUTOSAR.xsd");
-                    var res = gen.GenerateDiffData();
-                    File.Delete(array3[i]);
-                    using (File.Create(array3[i]));
-                    DataStore.Save(res, array3[i]);                    
+                    using (Comparer diff = new Comparer())
+                    {
+                        Console.WriteLine(array3[i]);
+                        XmlDocument d1 = new XmlDocument();
+                        XmlDocument d2 = new XmlDocument();
+                        d1.Load(array1[i]);
+                        d2.Load(array2[i]);
+
+                        var res1 = diff.DoCompare(d1, d2);
+                        File.Delete(array3[i]);
+                        using (File.Create(array3[i]))
+                        {
+                        }
+
+                        DataStore.Save(res1, array3[i]);
+                    }
                 }               
             }
 
@@ -65,10 +78,14 @@ namespace ConsoleApplication1
             {
                 if (FileCompare(array1[i], array2[i]) == false)
                 {
-                    Console.WriteLine("Patching ... "  + array3[i]);
-                    var result = DataStore.Load<List<DiffDataElement>>(array3[i]);            
-                    DiffDataReader reader = new DiffDataReader(result);                    
-                    reader.ApplyDifferencesToFile(array1[i]);                
+                    using (Comparer diff = new Comparer())
+                    {
+                        Console.WriteLine("Patching ... " + array3[i]);
+                        var result = DataStore.Load<BaseDiffResultObjectList>(array3[i]);                        
+                        XmlDocument d1 = new XmlDocument();
+                        d1.Load(array2[i]);
+                        var res = diff.GetResultFile(result, d1);                        
+                    }
                 }               
             }
         }
