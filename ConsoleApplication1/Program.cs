@@ -95,9 +95,9 @@ namespace ConsoleApplication1
 
 
             var f1 =
-                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\Developer\DataTypes.arxml";
+                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\Developer\ComponentTypes\SwcBc.arxml";
             var f2 =
-                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\Developer\DataTypes.arxml";
+                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\Developer\ComponentTypes\SwcBc.arxml";
             var f3 = "out.xml";
             var f4 = "out1.xml";
 
@@ -221,66 +221,150 @@ namespace ConsoleApplication1
                     }
 
                     // case delete
-                    if (element.Element("left_content") != null && element.Element("right_content") == null)
+                    if (leftContent != null && rightContent == null)
                     {
+                        var leftLocation = element.Element("left_location");
+                        var rightLocation = element.Element("right_location");
 
-                        xPath = AddNsTOXPath(
-                            element.Element("left_location").Element("parent").Attribute("xpath").Value);
-                        var node1 = docNav.XPathSelectElement(xPath);
-
-                        if (node1 != null && element.Element("left_content").Element("element") != null)
+                        if (leftLocation != null && rightLocation != null)
                         {
-                            Console.WriteLine("Delete");
-                            var nodeToDelete = element.Element("left_content").Element("element").FirstNode;
-                            var nodedel =
-                                node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
-                            try
-                            {
-                                nodedel.Remove();
-                            }
-                            catch (Exception)
-                            {
+                            var leftParent = leftLocation.Element("parent");
+                            var rightParent = rightLocation.Element("parent");
 
-                                //throw;
-                            }
+                            if (leftParent != null && rightParent != null)
+                            {
+                                var leftXPath = leftParent.Attribute("xpath");
+                                var rightXPath = rightParent.Attribute("xpath");
+                                var leftPosition = leftLocation.Element("position");
+                                var rightPosition = rightLocation.Element("position");
 
+                                if (leftXPath != null && rightXPath != null && leftPosition != null && rightPosition != null)
+                                {
+                                    var leftContentData = leftContent.Element("element");
+
+                                    if (leftContentData != null)
+                                    {
+                                        var pathToDelete = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+
+                                        if (pathToDelete == null)
+                                        {
+                                            throw new Exception("Path to delete element cannot be found!!!");
+                                        }
+
+                                        var elementToDelete = (XElement)leftContentData.FirstNode;
+
+                                        // todo: remove element comparison
+                                        var nodeToDelete =
+                                            pathToDelete.Elements()
+                                                .FirstOrDefault(x => x.Value == elementToDelete.Value);
+
+                                        if (nodeToDelete == null)
+                                        {
+                                            throw new Exception("Element to delete cannot be found!!!");
+                                        }
+
+                                        Console.WriteLine("Remove");
+                                        nodeToDelete.Remove();
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Left data is not ok!!");
+                                    }
+                                }
+                                else
+                                {
+                                    throw new Exception("Right data is not ok!!!");
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception("Left or right xpath attribute is not ok!!!");
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Left or right parent is not ok!!!");
                         }
                     }
 
                     // case change
-                    if (element.Element("left_content") != null && element.Element("right_content") != null)
+                    if (leftContent != null && rightContent != null)
                     {
+                        var leftLocation = element.Element("left_location");
+                        var rightLocation = element.Element("right_location");
 
-                        xPath = AddNsTOXPath(
-                            element.Element("left_location").Element("parent").Attribute("xpath").Value);
-                        var node1 = docNav.XPathSelectElement(xPath);
-
-                        if (node1 != null && element.Element("right_content").Element("element") != null)
+                        if (leftLocation != null && rightLocation != null)
                         {
-                            Console.WriteLine("Change element");
-                            var changedNode = element.Element("right_content").Element("element").Value;
-                            node1.Value = changedNode;
-                        }
+                            var leftParent = leftLocation.Element("parent");
+                            var rightParent = rightLocation.Element("parent");
 
-                        if (node1 != null && element.Element("right_content").Element("attribute") != null)
+                            if (leftParent != null && rightParent != null)
+                            {
+                                var leftXPath = leftParent.Attribute("xpath");
+                                var rightXPath = rightParent.Attribute("xpath");
+                                var leftPosition = leftLocation.Element("position");
+                                var rightPosition = rightLocation.Element("position");
+
+                                if (leftXPath != null && rightXPath != null && leftPosition != null && rightPosition != null)
+                                {
+                                    var leftContentData = leftContent.Element("element");
+                                    var rightContentData = rightContent.Element("element");
+                                    var leftAttributeData = leftContent.Element("attribute");
+                                    var rightAttributeData = rightContent.Element("attribute");
+
+                                    if (leftContentData != null && rightContentData != null)
+                                    {
+                                        var elementToChange = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+
+                                        if (elementToChange != null)
+                                        {
+                                            Console.WriteLine("Change element");
+                                            // todo: change everything
+                                            elementToChange.Value = rightContentData.Value;
+                                        }
+                                        else
+                                        {
+                                            // todo:
+                                            throw new Exception("Element not found!!!");
+                                        }
+                                    }
+                                    else if (leftAttributeData != null && rightAttributeData != null)
+                                    {
+                                        var elementToChange = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+
+                                        if (elementToChange != null)
+                                        {
+                                            Console.WriteLine("Change attribute");
+
+                                            var changedAttributes = rightAttributeData.Attributes();
+                                            elementToChange.RemoveAttributes();
+                                            elementToChange.Add(changedAttributes);
+                                        }
+                                        else
+                                        {
+                                            throw new Exception("Element not found!!!");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Data is not ok!!!");
+                                    }
+                                }
+                                else
+                                {
+                                    throw new Exception("Right data is not ok!!!");
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception("Left or right xpath attribute is not ok!!!");
+                            }
+                        }
+                        else
                         {
-                            Console.WriteLine("Change attribute");
-                            var changedAttributes = element.Element("right_content").Element("attribute").Attributes();
-                            node1.RemoveAttributes();
-                            node1.Add(changedAttributes);
+                            throw new Exception("Left or right parent is not ok!!!");
                         }
-
-                        //var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
-                        //nodedel.Remove();
                     }
-
-
-
-                    //nav = docNav.CreateNavigator();
-                    //xPath = element.Element("left_location").Element("parent").Attribute("xpath").Value;
-                    //string value = nav.SelectSingleNode(xPath).Value;
-
-                    //   Console.WriteLine(value);
                 }
             }
 
