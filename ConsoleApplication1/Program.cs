@@ -6,88 +6,427 @@ using System.Threading.Tasks;
 
 namespace ConsoleApplication1
 {
+    using System.Data;
+    using System.Dynamic;
     using System.IO;
     using System.IO.Compression;
     using System.Xml;
     using System.Xml.Linq;
+    using System.Xml.XPath;
 
     using ConsoleApplication1.Data;
 
     using CustomXMLDiff;
-    using CustomXMLDiff.DiffManager.DiffResult;
+    using CustomXMLDiff.Core.Diagnostics;
+
+    using Fasterflect;
+
+    using XmlSpecificationCompare.XPathDiscovery;
 
     static class Program
     {
-        //private static List<DiffDataElement> data;
 
-        //private static XDocument doc1;
+        private static void ExecuteCommandSync(object command)
+        {
+            try
+            {
+                // create the ProcessStartInfo using "cmd" as the program to be run,
+                // and "/c " as the parameters.
+                // Incidentally, /c tells cmd that we want it to execute the command that follows,
+                // and then exit.
+                System.Diagnostics.ProcessStartInfo procStartInfo =
+                    new System.Diagnostics.ProcessStartInfo("cmd", "/c " + command);
 
-        //private static XDocument doc2;
+                // The following commands are needed to redirect the standard output.
+                // This means that it will be redirected to the Process.StandardOutput StreamReader.
+                procStartInfo.RedirectStandardOutput = true;
+                procStartInfo.UseShellExecute = false;
+                // Do not create the black window.
+                procStartInfo.CreateNoWindow = true;
+                // Now we create a process, assign its ProcessStartInfo and start it
+                System.Diagnostics.Process proc = new System.Diagnostics.Process();
+                proc.StartInfo = procStartInfo;
+                proc.Start();
+                // Get the output into a string
+                string result = proc.StandardOutput.ReadToEnd();
+                // Display the command output.
+                Console.WriteLine(result);
+            }
+            catch (Exception objException)
+            {
+                // Log the exception
+            }
+        }
 
+        private static void CreateDiff(string f1, string f2, string o)
+        {
+            ExecuteCommandSync(@".\diff\DiffDogBatch.exe /cF " + f1 + " " + f2 + " /e /mX /dD /rX " + o);
+        }
+
+        private static string AddNsTOXPath(string path)
+        {
+            var result = path.Split('/').Where(x => !string.IsNullOrEmpty(x)).ToArray();
+            for (int i = 0; i < result.Length; i++)
+            {
+                if (!result[i].Contains("["))
+                {
+                    result[i] = "*[local-name()='" + result[i] + "']";
+                }
+                else
+                {
+                    var result2 = result[i].Split('[');
+                    result[i] = "*[local-name()='" + result2[0] + "'][" + result2[1];
+                }
+            }
+            var res = string.Join("/", result);
+            return "/" + res;
+        }
 
         private static void Main(string[] args)
         {
-           //// compare
-           // DiffDataGenerator gen = new DiffDataGenerator(@"D:\test\Com.xml", @"D:\test1\Com.xml", "AUTOSAR.xsd");
-           //var res = gen.GenerateDiffData();
-           //DataStore.Save(res, "data.res");
+            //// compare
+            // DiffDataGenerator gen = new DiffDataGenerator(@"D:\test\Com.xml", @"D:\test1\Com.xml", "AUTOSAR.xsd");
+            //var res = gen.GenerateDiffData();
+            //DataStore.Save(res, "data.res");
+            //var doc = XDocument.Load(
+            //    @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\ECUC\IKE_BAC4.ecuc.arxml");
+            //var doc2 = XDocument.Load(
+            //    @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\ECUC\IKE_BAC4.ecuc.arxml");
 
-           //// //// merge
-           //var result = DataStore.Load<List<DiffDataElement>>("data.res");            
-           //DiffDataReader reader = new DiffDataReader(result);
-           //File.Delete(@"d:\a1.arxml");
-           //File.Copy(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml", @"d:\a1.arxml");
-           //reader.ApplyDifferencesToFile(@"d:\a1.arxml");
 
-           //// Directory.Delete("config", true);
-            ZipData.UnZip("config_p1.zip", "config");
-            ZipData.UnZip("config_p2.zip", "result");
-            ZipData.UnZip("config_p2.zip", "config1");
-            string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config", "*.arxml", SearchOption.AllDirectories);
-            string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\config1", "*.arxml", SearchOption.AllDirectories);
-            string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
+            var f1 =
+                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\Developer\DataTypes.arxml";
+            var f2 =
+                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\Developer\DataTypes.arxml";
+            var f3 = "out.xml";
+            var f4 = "out1.xml";
 
-           // ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
-
-            
-
-            for (int i = 0; i < array1.Length; i++)
+            File.Delete(f3);
+            using (File.Create(f3))
             {
-                if (FileCompare(array1[i], array2[i]) == false)
-                {
-                    using (Comparer diff = new Comparer())
-                    {
-                        Console.WriteLine(array3[i]);
-                        XmlDocument d1 = new XmlDocument();
-                        XmlDocument d2 = new XmlDocument();
-                        d1.Load(array1[i]);
-                        d2.Load(array2[i]);
+            }
 
-                        var res1 = diff.DoCompare(d1, d2);
-                        File.Delete(array3[i]);
-                        using (File.Create(array3[i]))
+            File.Delete(f4);
+
+            File.Copy(f1, f4);
+
+            CreateDiff(f1, f2, f3);
+
+            var d = XDocument.Load(f3);
+            string xPath;
+
+
+            Console.WriteLine("Compare complete!");
+            var originalDoc = XDocument.Load(f1).Root;
+            var docNav = XDocument.Load(f4).Root;
+
+            if (docNav != null && originalDoc != null)
+            {
+                foreach (var element in d.Root.Elements("xml_diff"))
+                {
+                    var leftContent = element.Element("left_content");
+                    var rightContent = element.Element("right_content");
+
+                    // case add, only right content
+                    if (leftContent == null && rightContent != null)
+                    {
+                        var leftLocation = element.Element("left_location");
+                        var rightLocation = element.Element("right_location");
+
+                        if (leftLocation != null && rightLocation != null)
                         {
+                            var leftParent = leftLocation.Element("parent");
+                            var rightParent = rightLocation.Element("parent");
+
+                            if (leftParent != null && rightParent != null)
+                            {
+                                var leftXPath = leftParent.Attribute("xpath");
+                                var rightXPath = rightParent.Attribute("xpath");
+                                var leftPosition = leftLocation.Element("position");
+                                var rightPosition = rightLocation.Element("position");
+
+                                if (leftXPath != null && rightXPath != null && leftPosition != null && rightPosition != null)
+                                {
+                                    var originalNode = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value));                                    
+
+                                    if (originalNode == null)
+                                    {
+                                        throw new Exception("Element cannot be found!");
+                                    }
+                                    
+                                    var changeParentNode = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+
+                                    if (changeParentNode == null)
+                                    {
+                                        //todo: search in right childs
+                                        throw new Exception("Parent node deleted, element cannot be added!!!");
+                                    }
+
+                                    var rightContentData = rightContent.Element("element");
+
+                                    if (rightContentData != null)
+                                    {
+                                        Console.WriteLine("Add");
+
+                                        var position = rightLocation.Element("position");
+
+                                        if (position != null)
+                                        {
+                                            var possitionInt = int.Parse(position.Value);
+                                            var lastOrDefault = changeParentNode.Elements().Take(possitionInt - 1).LastOrDefault();
+
+                                            if (lastOrDefault != null)
+                                            {
+                                                if (possitionInt == 2)
+                                                {
+                                                    // add as first child node
+                                                    changeParentNode.AddFirst(rightContentData.Elements());
+                                                }
+                                                else
+                                                {
+                                                    // add in correspoding place
+                                                    lastOrDefault.AddAfterSelf(rightContentData.Elements());
+                                                }                                                
+                                            }
+                                            else
+                                            {
+                                                // add as first child node
+                                                changeParentNode.AddFirst(rightContentData.Elements());
+                                            }
+                                        }
+                                        else
+                                        {
+                                            throw new Exception("Position element is not correct!!!");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Right data is not ok!!!");
+                                    }
+                                }
+                                else
+                                {
+                                    throw new Exception("Left or right xpath attribute is not ok!!!");
+                                }
+                            }
+                            else
+                            {
+                                throw new Exception("Left or right parent is not ok!!!");
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Left or right location is not ok!!!");
+                        }
+                    }
+
+                    // case delete
+                    if (element.Element("left_content") != null && element.Element("right_content") == null)
+                    {
+
+                        xPath = AddNsTOXPath(
+                            element.Element("left_location").Element("parent").Attribute("xpath").Value);
+                        var node1 = docNav.XPathSelectElement(xPath);
+
+                        if (node1 != null && element.Element("left_content").Element("element") != null)
+                        {
+                            Console.WriteLine("Delete");
+                            var nodeToDelete = element.Element("left_content").Element("element").FirstNode;
+                            var nodedel =
+                                node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
+                            try
+                            {
+                                nodedel.Remove();
+                            }
+                            catch (Exception)
+                            {
+
+                                //throw;
+                            }
+
+                        }
+                    }
+
+                    // case change
+                    if (element.Element("left_content") != null && element.Element("right_content") != null)
+                    {
+
+                        xPath = AddNsTOXPath(
+                            element.Element("left_location").Element("parent").Attribute("xpath").Value);
+                        var node1 = docNav.XPathSelectElement(xPath);
+
+                        if (node1 != null && element.Element("right_content").Element("element") != null)
+                        {
+                            Console.WriteLine("Change element");
+                            var changedNode = element.Element("right_content").Element("element").Value;
+                            node1.Value = changedNode;
                         }
 
-                        DataStore.Save(res1, array3[i]);
+                        if (node1 != null && element.Element("right_content").Element("attribute") != null)
+                        {
+                            Console.WriteLine("Change attribute");
+                            var changedAttributes = element.Element("right_content").Element("attribute").Attributes();
+                            node1.RemoveAttributes();
+                            node1.Add(changedAttributes);
+                        }
+
+                        //var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
+                        //nodedel.Remove();
                     }
-                }               
+
+
+
+                    //nav = docNav.CreateNavigator();
+                    //xPath = element.Element("left_location").Element("parent").Attribute("xpath").Value;
+                    //string value = nav.SelectSingleNode(xPath).Value;
+
+                    //   Console.WriteLine(value);
+                }
             }
 
-            for (int i = 0; i < array1.Length; i++)
-            {
-                if (FileCompare(array1[i], array2[i]) == false)
-                {
-                    using (Comparer diff = new Comparer())
-                    {
-                        Console.WriteLine("Patching ... " + array3[i]);
-                        var result = DataStore.Load<BaseDiffResultObjectList>(array3[i]);                        
-                        XmlDocument d1 = new XmlDocument();
-                        d1.Load(array2[i]);
-                        var res = diff.GetResultFile(result, d1);                        
-                    }
-                }               
-            }
+            docNav.Save(f4);
+
+
+
+            //// //// merge
+            //var result = DataStore.Load<List<DiffDataElement>>("data.res");            
+            //DiffDataReader reader = new DiffDataReader(result);
+            //File.Delete(@"d:\a1.arxml");
+            //File.Copy(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml", @"d:\a1.arxml");
+            //reader.ApplyDifferencesToFile(@"d:\a1.arxml");
+
+            // Directory.Delete("config", true);
+            // ZipData.UnZip("config.zip", "c");
+            //    ZipData.UnZip("config1.zip", "result");
+            //    ZipData.UnZip("config1.zip", "c1");
+            //string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c", "*.arxml", SearchOption.AllDirectories);
+            //string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c1", "*.arxml", SearchOption.AllDirectories);
+            //string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
+
+            ////   // ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
+
+
+
+            //for (int i = 0; i < array1.Length; i++)
+            //{
+            //    if (FileCompare(array1[i], array2[i]) == false)
+            //    {
+            //        Console.WriteLine(array3[i]);
+
+            //        File.Delete(array3[i]);
+            //        using (File.Create(array3[i]))
+            //        {
+            //        }
+
+            //        CreateDiff(array1[i], array2[i], array3[i]);
+            //    }
+            //}
+
+            //        DataStore.Save(res1, array3[i]);
+            //    }
+            //}               
+            //    }
+
+            //for (int i = 0; i < array1.Length; i++)
+            //{
+            //    if (FileCompare(array1[i], array2[i]) == false)
+            //    {
+            //        var d = XDocument.Load(array3[i]);
+            //        string xPath;
+
+
+            //        Console.WriteLine("Compare complete!");
+            //        var docNav = XDocument.Load(array1[i]).Root;
+
+            //        foreach (var element in d.Root.Elements("xml_diff"))
+            //        {
+            //            // case add
+            //            if (element.Element("left_content") == null && element.Element("right_content") != null)
+            //            {
+
+            //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
+            //                var node1 = docNav.XPathSelectElement(xPath);
+
+            //                if (node1 != null && element.Element("right_content").Element("element") != null)
+            //                {
+            //                    Console.WriteLine("Add");
+            //                    //    node1.Add(element.Element("right_content").Element("element").FirstNode);
+
+            //                    try
+            //                    {
+            //                        node1.Elements().Take(int.Parse(element.Element("left_location").Element("position").Value) - 1).LastOrDefault().AddAfterSelf(element.Element("right_content").Element("element").FirstNode);
+            //                    }
+            //                    catch (Exception)
+            //                    {
+
+            //                    }
+
+            //                }
+            //            }
+
+            //            // case delete
+            //            if (element.Element("left_content") != null && element.Element("right_content") == null)
+            //            {
+
+            //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
+            //                var node1 = docNav.XPathSelectElement(xPath);
+
+            //                if (node1 != null && element.Element("left_content").Element("element") != null)
+            //                {
+            //                    Console.WriteLine("Delete");
+            //                    var nodeToDelete = element.Element("left_content").Element("element").FirstNode;
+            //                    var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
+            //                    try
+            //                    {
+            //                        nodedel.Remove();
+            //                    }
+            //                    catch (Exception)
+            //                    {
+
+            //                        //throw;
+            //                    }
+
+            //                }
+            //            }
+
+            //            // case change
+            //            if (element.Element("left_content") != null && element.Element("right_content") != null)
+            //            {
+
+            //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
+            //                var node1 = docNav.XPathSelectElement(xPath);
+
+            //                if (node1 != null && element.Element("right_content").Element("element") != null)
+            //                {
+            //                    Console.WriteLine("Change element");
+            //                    var changedNode = element.Element("right_content").Element("element").Value;
+            //                    node1.Value = changedNode;
+            //                }
+
+            //                if (node1 != null && element.Element("right_content").Element("attribute") != null)
+            //                {
+            //                    Console.WriteLine("Change attribute");
+            //                    var changedAttributes = element.Element("right_content").Element("attribute").Attributes();
+            //                    node1.RemoveAttributes();
+            //                    node1.Add(changedAttributes);
+            //                }
+
+            //                //var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
+            //                //nodedel.Remove();
+            //            }
+
+
+
+            //            //nav = docNav.CreateNavigator();
+            //            //xPath = element.Element("left_location").Element("parent").Attribute("xpath").Value;
+            //            //string value = nav.SelectSingleNode(xPath).Value;
+
+            //            //   Console.WriteLine(value);
+            //        }
+
+            //        docNav.Save(array1[i]);
+            //    }
+            //}
         }
 
         public static void DeleteDirectory(string path, bool recursive)

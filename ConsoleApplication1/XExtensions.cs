@@ -3,11 +3,16 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-
+    using System.Text;
     using System.Xml.Linq;
 
     public static class XExtensions
     {
+        public static String InnerXml(this XElement source)
+        {
+            return source.Descendants().Select(x => x.ToString()).Aggregate(String.Concat);
+        }
+
         public static void Sort(this XElement source, bool bSortAttributes = true)
         {
             //Make sure there is a valid source
