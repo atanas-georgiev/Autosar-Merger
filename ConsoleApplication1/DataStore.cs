@@ -15,7 +15,7 @@ namespace ConsoleApplication1
     ///     The game data.
     /// </summary>
     public static class DataStore
-    {
+    {        
         /// <summary>
         /// The player data save.
         /// </summary>

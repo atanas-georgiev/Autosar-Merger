@@ -82,6 +82,7 @@
   <ItemGroup>
     <Compile Include="DataStore.cs" />
     <Compile Include="Data\ZipData.cs" />
+    <Compile Include="NodeComperer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="XExtensions.cs" />

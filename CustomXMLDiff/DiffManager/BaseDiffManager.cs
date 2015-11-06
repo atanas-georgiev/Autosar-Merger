@@ -49,7 +49,7 @@ namespace CustomXMLDiff.DiffManager
                         if (localName == "node")
                         {
                             if (element.ChildNodes.Count > 0)
-                            {
+                            {                               
                                 ApplyDiff(element, matchNode, ref results);
                             }
                         }
@@ -97,23 +97,23 @@ namespace CustomXMLDiff.DiffManager
                         {
                             string attribute = node.Attributes["name"]==null?null: node.Attributes["name"].Value;
                             attribute = string.IsNullOrEmpty(attribute) && node.Attributes["type"] != null?node.Attributes["type"].Value:attribute;
-                            string insert = string.IsNullOrEmpty(attribute) ? "/*[local-name()=" + node.Name + "'][" + index + "]" : "/" + node.Name + "[" + index + "|" + attribute + "]";
+                            string insert =string.IsNullOrEmpty(attribute)? "/" + node.Name + "[" + index + "]" : "/" + node.Name + "[" + index + "|" + attribute + "]";
                             builder.Insert(0, insert);
                         }
                         else
                         {
-                            builder.Insert(0, "/*[local-name()='" + node.Name + "'][" + index + "]");
+                            builder.Insert(0, "/" + node.Name + "[" + index + "]");
                         }
                         node = node.ParentNode;
                         break;
                     case XmlNodeType.Document:
                         return builder.ToString();
                     case XmlNodeType.Comment:
-                   //     builder.Insert(0, "/comment");
+                        builder.Insert(0, "/comment");
                         node = node.ParentNode;
                         break;
                     case XmlNodeType.Text:
-                     //   builder.Insert(0, /*"/value: " + node.Value*/"");
+                        builder.Insert(0, "/value: " + node.Value);
                         node = node.ParentNode;
                         break;
                     default:
@@ -167,10 +167,10 @@ namespace CustomXMLDiff.DiffManager
                 case DiffState.Added:
                     {
                        var nav = navigator.SelectSingleNode(item.XPath);
-                       if (nav != null && item.ChangedNode != null && item.ChangedNode is XmlElement) // todo
+                       if (nav != null)
                        {
                            XmlElement el = (XmlElement)item.ChangedNode;
-                           //el.SetAttribute("patchState", "Added");
+                           el.SetAttribute("patchState", "Added");
                            if (item.XPath.Substring(item.XPath.LastIndexOf("/")).Contains(item.ChangedNode.Name))
                                nav.InsertAfter(el.OuterXml);
                            else
@@ -179,24 +179,14 @@ namespace CustomXMLDiff.DiffManager
                         break;
                     }
                 case DiffState.Changed:
-                    {                       
-                       var nav = navigator.SelectSingleNode(item.XPath);
+                    {
+                       var nav =  navigator.SelectSingleNode(item.XPath);
                        if (nav != null)
                        {
-                           XmlElement el;
-                           if (item.OriginalNode is XmlText)
-                           {
-                               nav.InnerXml = item.OriginalNode.Value;
-                           }
-                           else if (item.OriginalNode is XmlDocument)
-                           {
-                               el = (XmlElement)item.OriginalNode;
-                               //el.SetAttribute("patchState", "Changed");
-                               //   el.SetAttribute("changedValue", item.ChangedNode.OuterXml);
-                               nav.ReplaceSelf(el.OuterXml);
-                               //   nav.InnerXml = item.ChangedNode.InnerXml;
-                           }
-
+                           XmlElement el = (XmlElement)item.OriginalNode;
+                           el.SetAttribute("patchState", "Changed");
+                           el.SetAttribute("changedValue", item.ChangedNode.OuterXml);
+                           nav.ReplaceSelf(el.OuterXml);
                        }
                         break;
                     }
@@ -205,27 +195,9 @@ namespace CustomXMLDiff.DiffManager
                         var nav = navigator.SelectSingleNode(item.XPath);
                         if (nav != null)
                         {
-                            XmlElement el;
-                            if (item.OriginalNode is XmlText)
-                            {
-                                nav.InnerXml = item.OriginalNode.Value;
-                            }
-                            else if (item.OriginalNode is XmlDocument)
-                            {
-                                el = (XmlElement)item.OriginalNode;
-                                nav.ReplaceSelf(el.OuterXml);                                
-                            }
-
-                            //try
-                            //{
-                            //    XmlElement el = (XmlElement)item.OriginalNode;
-                            //    //el.SetAttribute("patchState", "Removed");
-                            //    nav.ReplaceSelf(el.OuterXml);
-                            //}
-                            //catch
-                            //{
-                            //    var a = 1;
-                            //}
+                            XmlElement el = (XmlElement)item.OriginalNode;
+                            el.SetAttribute("patchState", "Removed");
+                            nav.ReplaceSelf(el.OuterXml);
                         }
                         break;
                     }

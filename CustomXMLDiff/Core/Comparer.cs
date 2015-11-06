@@ -40,13 +40,15 @@ namespace CustomXMLDiff
             Manager = manager;
 
         }
-        //~Comparer()
-        //{
-        //    if (File.Exists(_tempFilePath))
-        //    {
-        //        File.Delete(_tempFilePath);
-        //    }
-        //}
+
+        
+        ~Comparer()
+        {
+            if (File.Exists(_tempFilePath))
+            {
+                File.Delete(_tempFilePath);
+            }
+        }
 
         public void Dispose()
         {
@@ -58,11 +60,11 @@ namespace CustomXMLDiff
 
         public BaseDiffResultObjectList DoCompare(string originalDocumentPath, string changedDocumentPath)
         {
-            return  DoCompare(originalDocumentPath, changedDocumentPath, _tempFilePath, XmlDiffOptions.IgnoreChildOrder);
+            return  DoCompare(originalDocumentPath, changedDocumentPath, _tempFilePath, XmlDiffOptions.None);
         }  
         public BaseDiffResultObjectList DoCompare(string originalDocumentPath, string changedDocumentPath, string outputFilePath)
         {
-            return DoCompare(originalDocumentPath, changedDocumentPath, outputFilePath, XmlDiffOptions.IgnoreChildOrder);
+            return DoCompare(originalDocumentPath, changedDocumentPath, outputFilePath, XmlDiffOptions.None);
         }
 
         public BaseDiffResultObjectList DoCompare(string originalDocumentPath, string changedDocumentPath, XmlDiffOptions options)
@@ -99,7 +101,7 @@ namespace CustomXMLDiff
         }
         public BaseDiffResultObjectList DoCompare(XmlDocument originalDocument, XmlDocument changedDocument)
         {
-            return DoCompare(originalDocument.DocumentElement, changedDocument.DocumentElement, this._tempFilePath,  XmlDiffOptions.IgnoreChildOrder);
+            return DoCompare(originalDocument.DocumentElement, changedDocument.DocumentElement, this._tempFilePath,  XmlDiffOptions.None);
         }
         public BaseDiffResultObjectList DoCompare(XmlNode originalDocument, XmlNode changedDocument, XmlDiffOptions options)
         {
@@ -113,7 +115,8 @@ namespace CustomXMLDiff
             XmlTextWriter tw = new XmlTextWriter(stream);
             
             tw.Formatting = Formatting.Indented;
-            SetDiffOptions(options);
+
+            SetDiffOptions(XmlDiffOptions.None);
             bool isEqual = false;
   
             try
@@ -132,12 +135,11 @@ namespace CustomXMLDiff
                 return results;
             }
 
-            using (XmlTextReader diffGram = new XmlTextReader(outputFilePath))
-            {
-                XmlDocument diffgramDoc = new XmlDocument();
-                diffgramDoc.Load(diffGram);
-                Manager.ApplyDiff(diffgramDoc.DocumentElement.FirstChild, originalDocument, ref results);
-            }
+            XmlTextReader diffGram = new XmlTextReader(outputFilePath);
+            XmlDocument diffgramDoc = new XmlDocument();
+            diffgramDoc.Load(diffGram);
+            diffgramDoc.Save("diffgram.xml");
+            Manager.ApplyDiff(diffgramDoc.DocumentElement.FirstChild, originalDocument, ref results);
             return results;
         }
         public XmlDocument GetResultFile(BaseDiffResultObjectList changes, XmlNode originalNode)

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApplication1
 {
+    using System.CodeDom.Compiler;
     using System.Data;
     using System.Dynamic;
     using System.IO;
@@ -60,7 +61,7 @@ namespace ConsoleApplication1
 
         private static void CreateDiff(string f1, string f2, string o)
         {
-            ExecuteCommandSync(@".\diff\DiffDogBatch.exe /cF " + f1 + " " + f2 + " /e /mX /dD /rX " + o);
+            ExecuteCommandSync(@".\diff\DiffDogBatch.exe /cF " + f1 + " " + f2 + " /e /iOC /iOA /mX /dD /rX " + o);
         }
 
         private static string AddNsTOXPath(string path)
@@ -84,20 +85,10 @@ namespace ConsoleApplication1
 
         private static void Main(string[] args)
         {
-            //// compare
-            // DiffDataGenerator gen = new DiffDataGenerator(@"D:\test\Com.xml", @"D:\test1\Com.xml", "AUTOSAR.xsd");
-            //var res = gen.GenerateDiffData();
-            //DataStore.Save(res, "data.res");
-            //var doc = XDocument.Load(
-            //    @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\ECUC\IKE_BAC4.ecuc.arxml");
-            //var doc2 = XDocument.Load(
-            //    @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\ECUC\IKE_BAC4.ecuc.arxml");
-
-
             var f1 =
-                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\Developer\ComponentTypes\SwcBc.arxml";
+                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\Developer\ComponentTypes\CHECKCONTROL_MDL.arxml";
             var f2 =
-                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\Developer\ComponentTypes\SwcBc.arxml";
+                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\Developer\ComponentTypes\CHECKCONTROL_MDL.arxml";
             var f3 = "out.xml";
             var f4 = "out1.xml";
 
@@ -113,12 +104,12 @@ namespace ConsoleApplication1
             CreateDiff(f1, f2, f3);
 
             var d = XDocument.Load(f3);
-            string xPath;
-
 
             Console.WriteLine("Compare complete!");
             var originalDoc = XDocument.Load(f1).Root;
             var docNav = XDocument.Load(f4).Root;
+            var elementsToDelete = new List<XElement>();
+           // var docNavElements = XDocument.Load(f4).Root.Descendants();
 
             if (docNav != null && originalDoc != null)
             {
@@ -158,8 +149,14 @@ namespace ConsoleApplication1
 
                                     if (changeParentNode == null)
                                     {
-                                        //todo: search in right childs
-                                        throw new Exception("Parent node deleted, element cannot be added!!!");
+                                        //changeParentNode =
+                                        //    docNavElements.FirstOrDefault(x => x.Name == originalNode.Name && x.AncestorsAndSelf().Count() == originalNode.AncestorsAndSelf().Count());
+
+                                        //if (changeParentNode == null)
+                                        {
+                                            //todo: search in right childs
+                                            throw new Exception("Parent node deleted, element cannot be added!!!");
+                                        }
                                     }
 
                                     var rightContentData = rightContent.Element("element");
@@ -175,20 +172,20 @@ namespace ConsoleApplication1
                                             var possitionInt = int.Parse(position.Value);
                                             var lastOrDefault = changeParentNode.Elements().Take(possitionInt - 1).LastOrDefault();
 
-                                            if (lastOrDefault != null)
-                                            {
-                                                if (possitionInt == 2)
-                                                {
-                                                    // add as first child node
-                                                    changeParentNode.AddFirst(rightContentData.Elements());
-                                                }
-                                                else
-                                                {
-                                                    // add in correspoding place
-                                                    lastOrDefault.AddAfterSelf(rightContentData.Elements());
-                                                }                                                
-                                            }
-                                            else
+                                            //if (lastOrDefault != null)
+                                            //{
+                                            //    if (possitionInt == 2)
+                                            //    {
+                                            //        // add as first child node
+                                            //        changeParentNode.AddFirst(rightContentData.Elements());
+                                            //    }
+                                            //    else
+                                            //    {
+                                            //        // add in correspoding place
+                                            //        lastOrDefault.AddAfterSelf(rightContentData.Elements());
+                                            //    }                                                
+                                            //}
+                                            //else
                                             {
                                                 // add as first child node
                                                 changeParentNode.AddFirst(rightContentData.Elements());
@@ -244,27 +241,69 @@ namespace ConsoleApplication1
 
                                     if (leftContentData != null)
                                     {
-                                        var pathToDelete = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+                                        //var pathToDelete = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+                                        
+                                        //if (pathToDelete == null)
+                                        //{
+                                        var pathToDeleteOriginal = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value)).GetXPath();
 
-                                        if (pathToDelete == null)
+                                        ////    pathToDelete =
+                                        ////        docNavElements.FirstOrDefault(x => x.Name == pathToDeleteOriginal.Name && x.AncestorsAndSelf().Count() == pathToDeleteOriginal.AncestorsAndSelf().Count());
+                                        ////Console.WriteLine(pathToDelete.GetXPath());
+                                        ////if (pathToDelete == null)
+                                        //    {
+                                        //        throw new Exception("Path to delete element cannot be found!!!");
+                                        //    }
+                                        //}
+
+                                        //var elementToDeleteOrig = pathToDeleteOriginal.Elements().ToList()[int.Parse(rightPosition.Value) - 1];
+                                        //var rightContentData = ;
+
+                                        XElement elementToDelete = (XElement)leftContent.Element("element").FirstNode;
+                                        //NodeComperer comp = new NodeComperer();
+
+                                        var elementToDeleteOrig1 =
+                                            docNav.Descendants().Where(
+                                                x => pathToDeleteOriginal == x.Parent.GetXPath()
+                                                ).ToList<XElement>();
+
+                                        var elementToDeleteOrig =
+                                            elementToDeleteOrig1.Where(
+                                                x => NodeComperer.Compare(x, elementToDelete)
+                                               // && pathToDeleteOriginal == x.Parent.GetXPath()
+                                                );
+                                        
+                                        //var selectedElement =
+                                        //    docNav.Descendants().Where(x => 
+                                        //        x.Value == elementToDelete.Value
+                                        //        && x.Parent.GetXPath() == pathToDeleteOriginal);
+
+                                        //  XElement el = new XElement(docNav.Descendants().FirstOrDefault(x => XNode.DeepEquals(x, elementToDelete)));
+
+                                        var result = elementToDeleteOrig.ToList().Count;
+                                        if (result != 1)
                                         {
-                                            throw new Exception("Path to delete element cannot be found!!!");
+                                            Console.WriteLine("NOT REMOVED!!!");
+                                            //throw new Exception("Element to delete cannot be found!!!");
                                         }
-
-                                        var elementToDelete = (XElement)leftContentData.FirstNode;
-
+                                        else
+                                        {
+                                            Console.WriteLine("Remove");
+                                            //selectedElement.First().Remove();
+                                            elementsToDelete.Add(elementToDeleteOrig.First());
+                                        }
                                         // todo: remove element comparison
-                                        var nodeToDelete =
-                                            pathToDelete.Elements()
-                                                .FirstOrDefault(x => x.Value == elementToDelete.Value);
+                                        //var nodeToDelete =
+                                        //    pathToDelete.Elements()
+                                        //        .FirstOrDefault(x => x.Value == elementToDelete.Value);
 
-                                        if (nodeToDelete == null)
-                                        {
-                                            throw new Exception("Element to delete cannot be found!!!");
-                                        }
+                                        //if (nodeToDelete == null)
+                                        //{
+                                        //    throw new Exception("Element to delete cannot be found!!!");
+                                        //}
 
-                                        Console.WriteLine("Remove");
-                                        nodeToDelete.Remove();
+                                        //Console.WriteLine("Remove");
+                                        
                                     }
                                     else
                                     {
@@ -324,13 +363,20 @@ namespace ConsoleApplication1
                                         }
                                         else
                                         {
-                                            // todo:
-                                            throw new Exception("Element not found!!!");
+                                            var elementToChangeOriginal = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value));
+                                            elementToChange = docNav.Descendants().FirstOrDefault(x => XNode.DeepEquals(x, elementToChangeOriginal));
+
+                                            if (elementToChange == null)
+                                            {
+                                                throw new Exception("Element not found!!!");
+                                            }
                                         }
                                     }
                                     else if (leftAttributeData != null && rightAttributeData != null)
                                     {
-                                        var elementToChange = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+                                        //var elementToChange = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
+                                        var elementToChangeOriginal = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value));
+                                        var elementToChange = docNav.Descendants().FirstOrDefault(x => XNode.DeepEquals(x, elementToChangeOriginal));
 
                                         if (elementToChange != null)
                                         {
@@ -366,6 +412,11 @@ namespace ConsoleApplication1
                         }
                     }
                 }
+            }
+
+            foreach (var del in elementsToDelete)
+            {
+                del.Remove();
             }
 
             docNav.Save(f4);
