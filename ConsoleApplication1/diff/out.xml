@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:diff="http://www.via.ecp.fr/~remi/soft/xml/xmldiff" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-0-3.xsd" diff:status="below">
+  <AR-PACKAGES diff:status="below">
+    <AR-PACKAGE diff:status="below">
+      <ELEMENTS diff:status="below">
+        <COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE UUID="f25c92d2-5fd4-4b00-be3c-cd0c3c4cf8a2" diff:status="below">
+          <PORTS diff:status="below">
+            <P-PORT-PROTOTYPE UUID="27f37321-8575-4c4a-b2cc-1246b013332a" diff:status="below">
+              <SHORT-NAME diff:status="modified">pport_If_cs_Dfe_12Reset|pport_If_cs_Dfe_Reset</SHORT-NAME>
+            </P-PORT-PROTOTYPE>
+          </PORTS>
+          <INTERNAL-BEHAVIORS diff:status="below">
+            <SWC-INTERNAL-BEHAVIOR UUID="4c3ffa3d-8e24-48f1-89b8-be7abc746cb5" diff:status="below">
+              <DATA-TYPE-MAPPING-REFS diff:status="below">
+                <DATA-TYPE-MAPPING-REF DEST="DATA-TYPE-MAPPING-SET" diff:status="modified">/ComponentTypes/DataTypeMappingSets/SwcAtp1|/ComponentTypes/DataTypeMappingSets/FuBiDataTypeMappingSet</DATA-TYPE-MAPPING-REF>
+                <DATA-TYPE-MAPPING-REF DEST="DATA-TYPE-MAPPING-SET" diff:status="modified">/ComponentTypes/DataTypeMappingSets/FuBiDataTypeMappingSet|/ComponentTypes/DataTypeMappingSets/SwcAtp1</DATA-TYPE-MAPPING-REF>
+              </DATA-TYPE-MAPPING-REFS>
+            </SWC-INTERNAL-BEHAVIOR>
+          </INTERNAL-BEHAVIORS>
+        </COMPLEX-DEVICE-DRIVER-SW-COMPONENT-TYPE>
+      </ELEMENTS>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

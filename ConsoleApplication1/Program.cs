@@ -17,11 +17,6 @@ namespace ConsoleApplication1
 
     using ConsoleApplication1.Data;
 
-    using CustomXMLDiff;
-    using CustomXMLDiff.Core.Diagnostics;
-
-    using Fasterflect;
-
     using XmlSpecificationCompare.XPathDiscovery;
 
     static class Program
@@ -61,7 +56,7 @@ namespace ConsoleApplication1
 
         private static void CreateDiff(string f1, string f2, string o)
         {
-            ExecuteCommandSync(@".\diff\DiffDogBatch.exe /cF " + f1 + " " + f2 + " /e /iOC /iOA /mX /dD /rX " + o);
+            ExecuteCommandSync(@".\diff\xmldiff.exe diff " + f1 + " " + f2 + " " + o + " --keep-diff-only no --tag-childs no --diff-ns no");
         }
 
         private static string AddNsTOXPath(string path)
@@ -86,9 +81,9 @@ namespace ConsoleApplication1
         private static void Main(string[] args)
         {
             var f1 =
-                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config\Config\Developer\ComponentTypes\CHECKCONTROL_MDL.arxml";
+                @"D:\Config1\Config\ECUC\IKE_BAC4.ecuc.arxml";
             var f2 =
-                @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\Config1\Config\Developer\ComponentTypes\CHECKCONTROL_MDL.arxml";
+                @"D:\Config\ECUC\IKE_BAC4.ecuc.arxml";
             var f3 = "out.xml";
             var f4 = "out1.xml";
 
@@ -105,11 +100,23 @@ namespace ConsoleApplication1
 
             var d = XDocument.Load(f3);
 
+            var elements = d.Descendants().Where(x => x.Attributes().Any(y => y.Name.LocalName == "status" && y.Value == "modified"));
+
+
+
             Console.WriteLine("Compare complete!");
             var originalDoc = XDocument.Load(f1).Root;
             var docNav = XDocument.Load(f4).Root;
             var elementsToDelete = new List<XElement>();
-           // var docNavElements = XDocument.Load(f4).Root.Descendants();
+
+            foreach (var e in elements)
+            {
+                //Console.WriteLine(e.AbsoluteXPath());
+                var value = originalDoc.XPathSelectElement(e.AbsoluteXPath());
+                Console.WriteLine(value);
+            }
+
+            // var docNavElements = XDocument.Load(f4).Root.Descendants();
 
             if (docNav != null && originalDoc != null)
             {

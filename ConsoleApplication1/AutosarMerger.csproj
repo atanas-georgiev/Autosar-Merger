@@ -98,10 +98,14 @@
     <Folder Include="Exceptions\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CustomXMLDiff\CustomXMLDiff.csproj">
-      <Project>{85d904ca-2062-407e-8407-230b5f84c364}</Project>
-      <Name>CustomXMLDiff</Name>
-    </ProjectReference>
+    <Content Include="diff\iconv.dll" />
+    <Content Include="diff\libexslt.dll" />
+    <Content Include="diff\libxml2.dll" />
+    <Content Include="diff\libxmldiff.dll" />
+    <Content Include="diff\libxslt.dll" />
+    <Content Include="diff\out.xml" />
+    <Content Include="diff\xmldiff.exe" />
+    <Content Include="diff\zlib1.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
