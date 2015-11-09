@@ -9,6 +9,11 @@
 
     public static class XExtensions
     {
+        public static int Position(this XElement node)
+        {
+            return node.NodesBeforeSelf().Count();
+        }
+
         public static String InnerXml(this XElement source)
         {
             return source.Descendants().Select(x => x.ToString()).Aggregate(String.Concat);

@@ -59,6 +59,71 @@ namespace ConsoleApplication1
             ExecuteCommandSync(@".\diff\xmldiff.exe diff " + f1 + " " + f2 + " " + o + " --keep-diff-only no --tag-childs no --diff-ns no");
         }
 
+        private static void ApplyDiff(string originalFile, string diffFile, string targetFile)
+        {
+            var d = XDocument.Load(diffFile);
+
+            var modifiedElements = d.Descendants().Where(x => x.Attributes().Any(y => y.Name.LocalName == "status"));
+
+            Console.WriteLine("Compare complete!");
+            var originalDoc = XDocument.Load(originalFile).Root;
+            var changedDoc = XDocument.Load(targetFile).Root;
+            var elementsToDelete = new List<XElement>();
+
+            if (originalDoc != null)
+            {
+                foreach (var e in modifiedElements)
+                {
+                    if (e.Attribute("status").Value == "modified")
+                    {
+                        // modify
+                        var el = FindCorrespondingElement(e, originalDoc, changedDoc);
+                        ApplyChangedData(e, el);
+                    }
+                    else if (e.Attribute("status").Value == "removed")
+                    {
+                        // remove
+                        var el = FindCorrespondingElement(e, originalDoc, changedDoc);
+                        elementsToDelete.Add(el);
+                    }
+                    else if (e.Attribute("status").Value == "added")
+                    {
+                        // add                        
+                        var position = e.Position();
+                        var pathToParent = e.Parent.AbsoluteXPath();
+                        var foundParent = changedDoc.XPathSelectElement(pathToParent);
+                        e.Attribute("status").Remove();
+                        if (position == 0)
+                        {
+                            foundParent.AddFirst(e);
+                        }
+                        else
+                        {
+                            int pos = 0;
+
+                            foreach (var child in foundParent.Elements())
+                            {
+                                if (pos == position - 1)
+                                {
+                                    child.AddAfterSelf(e);
+                                    break;
+                                }
+
+                                pos++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (var del in elementsToDelete)
+            {
+                del.Remove();
+            }
+
+            changedDoc.Save(targetFile);
+        }
+
         private static string AddNsTOXPath(string path)
         {
             var result = path.Split('/').Where(x => !string.IsNullOrEmpty(x)).ToArray();
@@ -80,496 +145,260 @@ namespace ConsoleApplication1
 
         private static void Main(string[] args)
         {
-            var f1 =
-                @"D:\Config1\Config\ECUC\IKE_BAC4.ecuc.arxml";
-            var f2 =
-                @"D:\Config\ECUC\IKE_BAC4.ecuc.arxml";
-            var f3 = "out.xml";
-            var f4 = "out1.xml";
 
-            File.Delete(f3);
-            using (File.Create(f3))
+            //var f1 =
+            //    @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\c1\Config\Developer\ComponentTypes\SwcTnk.arxml";
+            //var f2 = @"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\c\Config\Developer\ComponentTypes\SwcTnk.arxml";
+            //var f3 = "out1.xml";
+
+            //CreateDiff(f1, f2, f3);
+            //File.Copy(f1, "out1111.xml");
+            //ApplyDiff(f1, f3, "out1111.xml");
+
+            ZipData.UnZip("config.zip", "c");            
+            ZipData.UnZip("config1.zip", "c1");
+            ZipData.UnZip("config1.zip", "result");
+
+            string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c", "*.arxml", SearchOption.AllDirectories);
+            string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c1", "*.arxml", SearchOption.AllDirectories);
+            string[] arrayResult = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
+
+            for (int i = 0; i < array1.Length; i++)
             {
-            }
-
-            File.Delete(f4);
-
-            File.Copy(f1, f4);
-
-            CreateDiff(f1, f2, f3);
-
-            var d = XDocument.Load(f3);
-
-            var elements = d.Descendants().Where(x => x.Attributes().Any(y => y.Name.LocalName == "status" && y.Value == "modified"));
-
-
-
-            Console.WriteLine("Compare complete!");
-            var originalDoc = XDocument.Load(f1).Root;
-            var docNav = XDocument.Load(f4).Root;
-            var elementsToDelete = new List<XElement>();
-
-            foreach (var e in elements)
-            {
-                //Console.WriteLine(e.AbsoluteXPath());
-                var value = originalDoc.XPathSelectElement(e.AbsoluteXPath());
-                Console.WriteLine(value);
-            }
-
-            // var docNavElements = XDocument.Load(f4).Root.Descendants();
-
-            if (docNav != null && originalDoc != null)
-            {
-                foreach (var element in d.Root.Elements("xml_diff"))
+                if (FileCompare(array1[i], array2[i]) == false)
                 {
-                    var leftContent = element.Element("left_content");
-                    var rightContent = element.Element("right_content");
+                    //var originalDoc = XDocument.Load(array1[i]);
+                    //var changedDoc = XDocument.Load(array2[i]);
 
-                    // case add, only right content
-                    if (leftContent == null && rightContent != null)
-                    {
-                        var leftLocation = element.Element("left_location");
-                        var rightLocation = element.Element("right_location");
+                    //File.Delete(arrayResult[i]);
+                    //using (File.Create(arrayResult[i]))
+                    //{
+                    //}
+                    Console.WriteLine("Comparing {0} and {1}", array1[i], array2[i]);
+                    CreateDiff(array1[i], array2[i], arrayResult[i]);
 
-                        if (leftLocation != null && rightLocation != null)
-                        {
-                            var leftParent = leftLocation.Element("parent");
-                            var rightParent = rightLocation.Element("parent");
-
-                            if (leftParent != null && rightParent != null)
-                            {
-                                var leftXPath = leftParent.Attribute("xpath");
-                                var rightXPath = rightParent.Attribute("xpath");
-                                var leftPosition = leftLocation.Element("position");
-                                var rightPosition = rightLocation.Element("position");
-
-                                if (leftXPath != null && rightXPath != null && leftPosition != null && rightPosition != null)
-                                {
-                                    var originalNode = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value));                                    
-
-                                    if (originalNode == null)
-                                    {
-                                        throw new Exception("Element cannot be found!");
-                                    }
-                                    
-                                    var changeParentNode = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
-
-                                    if (changeParentNode == null)
-                                    {
-                                        //changeParentNode =
-                                        //    docNavElements.FirstOrDefault(x => x.Name == originalNode.Name && x.AncestorsAndSelf().Count() == originalNode.AncestorsAndSelf().Count());
-
-                                        //if (changeParentNode == null)
-                                        {
-                                            //todo: search in right childs
-                                            throw new Exception("Parent node deleted, element cannot be added!!!");
-                                        }
-                                    }
-
-                                    var rightContentData = rightContent.Element("element");
-
-                                    if (rightContentData != null)
-                                    {
-                                        Console.WriteLine("Add");
-
-                                        var position = rightLocation.Element("position");
-
-                                        if (position != null)
-                                        {
-                                            var possitionInt = int.Parse(position.Value);
-                                            var lastOrDefault = changeParentNode.Elements().Take(possitionInt - 1).LastOrDefault();
-
-                                            //if (lastOrDefault != null)
-                                            //{
-                                            //    if (possitionInt == 2)
-                                            //    {
-                                            //        // add as first child node
-                                            //        changeParentNode.AddFirst(rightContentData.Elements());
-                                            //    }
-                                            //    else
-                                            //    {
-                                            //        // add in correspoding place
-                                            //        lastOrDefault.AddAfterSelf(rightContentData.Elements());
-                                            //    }                                                
-                                            //}
-                                            //else
-                                            {
-                                                // add as first child node
-                                                changeParentNode.AddFirst(rightContentData.Elements());
-                                            }
-                                        }
-                                        else
-                                        {
-                                            throw new Exception("Position element is not correct!!!");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        throw new Exception("Right data is not ok!!!");
-                                    }
-                                }
-                                else
-                                {
-                                    throw new Exception("Left or right xpath attribute is not ok!!!");
-                                }
-                            }
-                            else
-                            {
-                                throw new Exception("Left or right parent is not ok!!!");
-                            }
-                        }
-                        else
-                        {
-                            throw new Exception("Left or right location is not ok!!!");
-                        }
-                    }
-
-                    // case delete
-                    if (leftContent != null && rightContent == null)
-                    {
-                        var leftLocation = element.Element("left_location");
-                        var rightLocation = element.Element("right_location");
-
-                        if (leftLocation != null && rightLocation != null)
-                        {
-                            var leftParent = leftLocation.Element("parent");
-                            var rightParent = rightLocation.Element("parent");
-
-                            if (leftParent != null && rightParent != null)
-                            {
-                                var leftXPath = leftParent.Attribute("xpath");
-                                var rightXPath = rightParent.Attribute("xpath");
-                                var leftPosition = leftLocation.Element("position");
-                                var rightPosition = rightLocation.Element("position");
-
-                                if (leftXPath != null && rightXPath != null && leftPosition != null && rightPosition != null)
-                                {
-                                    var leftContentData = leftContent.Element("element");
-
-                                    if (leftContentData != null)
-                                    {
-                                        //var pathToDelete = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
-                                        
-                                        //if (pathToDelete == null)
-                                        //{
-                                        var pathToDeleteOriginal = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value)).GetXPath();
-
-                                        ////    pathToDelete =
-                                        ////        docNavElements.FirstOrDefault(x => x.Name == pathToDeleteOriginal.Name && x.AncestorsAndSelf().Count() == pathToDeleteOriginal.AncestorsAndSelf().Count());
-                                        ////Console.WriteLine(pathToDelete.GetXPath());
-                                        ////if (pathToDelete == null)
-                                        //    {
-                                        //        throw new Exception("Path to delete element cannot be found!!!");
-                                        //    }
-                                        //}
-
-                                        //var elementToDeleteOrig = pathToDeleteOriginal.Elements().ToList()[int.Parse(rightPosition.Value) - 1];
-                                        //var rightContentData = ;
-
-                                        XElement elementToDelete = (XElement)leftContent.Element("element").FirstNode;
-                                        //NodeComperer comp = new NodeComperer();
-
-                                        var elementToDeleteOrig1 =
-                                            docNav.Descendants().Where(
-                                                x => pathToDeleteOriginal == x.Parent.GetXPath()
-                                                ).ToList<XElement>();
-
-                                        var elementToDeleteOrig =
-                                            elementToDeleteOrig1.Where(
-                                                x => NodeComperer.Compare(x, elementToDelete)
-                                               // && pathToDeleteOriginal == x.Parent.GetXPath()
-                                                );
-                                        
-                                        //var selectedElement =
-                                        //    docNav.Descendants().Where(x => 
-                                        //        x.Value == elementToDelete.Value
-                                        //        && x.Parent.GetXPath() == pathToDeleteOriginal);
-
-                                        //  XElement el = new XElement(docNav.Descendants().FirstOrDefault(x => XNode.DeepEquals(x, elementToDelete)));
-
-                                        var result = elementToDeleteOrig.ToList().Count;
-                                        if (result != 1)
-                                        {
-                                            Console.WriteLine("NOT REMOVED!!!");
-                                            //throw new Exception("Element to delete cannot be found!!!");
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine("Remove");
-                                            //selectedElement.First().Remove();
-                                            elementsToDelete.Add(elementToDeleteOrig.First());
-                                        }
-                                        // todo: remove element comparison
-                                        //var nodeToDelete =
-                                        //    pathToDelete.Elements()
-                                        //        .FirstOrDefault(x => x.Value == elementToDelete.Value);
-
-                                        //if (nodeToDelete == null)
-                                        //{
-                                        //    throw new Exception("Element to delete cannot be found!!!");
-                                        //}
-
-                                        //Console.WriteLine("Remove");
-                                        
-                                    }
-                                    else
-                                    {
-                                        throw new Exception("Left data is not ok!!");
-                                    }
-                                }
-                                else
-                                {
-                                    throw new Exception("Right data is not ok!!!");
-                                }
-                            }
-                            else
-                            {
-                                throw new Exception("Left or right xpath attribute is not ok!!!");
-                            }
-                        }
-                        else
-                        {
-                            throw new Exception("Left or right parent is not ok!!!");
-                        }
-                    }
-
-                    // case change
-                    if (leftContent != null && rightContent != null)
-                    {
-                        var leftLocation = element.Element("left_location");
-                        var rightLocation = element.Element("right_location");
-
-                        if (leftLocation != null && rightLocation != null)
-                        {
-                            var leftParent = leftLocation.Element("parent");
-                            var rightParent = rightLocation.Element("parent");
-
-                            if (leftParent != null && rightParent != null)
-                            {
-                                var leftXPath = leftParent.Attribute("xpath");
-                                var rightXPath = rightParent.Attribute("xpath");
-                                var leftPosition = leftLocation.Element("position");
-                                var rightPosition = rightLocation.Element("position");
-
-                                if (leftXPath != null && rightXPath != null && leftPosition != null && rightPosition != null)
-                                {
-                                    var leftContentData = leftContent.Element("element");
-                                    var rightContentData = rightContent.Element("element");
-                                    var leftAttributeData = leftContent.Element("attribute");
-                                    var rightAttributeData = rightContent.Element("attribute");
-
-                                    if (leftContentData != null && rightContentData != null)
-                                    {
-                                        var elementToChange = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
-
-                                        if (elementToChange != null)
-                                        {
-                                            Console.WriteLine("Change element");
-                                            // todo: change everything
-                                            elementToChange.Value = rightContentData.Value;
-                                        }
-                                        else
-                                        {
-                                            var elementToChangeOriginal = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value));
-                                            elementToChange = docNav.Descendants().FirstOrDefault(x => XNode.DeepEquals(x, elementToChangeOriginal));
-
-                                            if (elementToChange == null)
-                                            {
-                                                throw new Exception("Element not found!!!");
-                                            }
-                                        }
-                                    }
-                                    else if (leftAttributeData != null && rightAttributeData != null)
-                                    {
-                                        //var elementToChange = docNav.XPathSelectElement(AddNsTOXPath(rightXPath.Value));
-                                        var elementToChangeOriginal = originalDoc.XPathSelectElement(AddNsTOXPath(leftXPath.Value));
-                                        var elementToChange = docNav.Descendants().FirstOrDefault(x => XNode.DeepEquals(x, elementToChangeOriginal));
-
-                                        if (elementToChange != null)
-                                        {
-                                            Console.WriteLine("Change attribute");
-
-                                            var changedAttributes = rightAttributeData.Attributes();
-                                            elementToChange.RemoveAttributes();
-                                            elementToChange.Add(changedAttributes);
-                                        }
-                                        else
-                                        {
-                                            throw new Exception("Element not found!!!");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        throw new Exception("Data is not ok!!!");
-                                    }
-                                }
-                                else
-                                {
-                                    throw new Exception("Right data is not ok!!!");
-                                }
-                            }
-                            else
-                            {
-                                throw new Exception("Left or right xpath attribute is not ok!!!");
-                            }
-                        }
-                        else
-                        {
-                            throw new Exception("Left or right parent is not ok!!!");
-                        }
-                    }
+                    //ApplyDiff(array1[i], arrayResult[i], array2[i]);
+                    ////var resultDoc = 
                 }
             }
 
-            foreach (var del in elementsToDelete)
+            for (int i = 0; i < array1.Length; i++)
             {
-                del.Remove();
+                if (FileCompare(array1[i], array2[i]) == false)
+                {
+                    try
+                    {
+                      Console.WriteLine("Diff {0} and {1}", array1[i], array2[i]);                      
+                      ApplyDiff(array1[i], arrayResult[i], array1[i]);
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");                        
+                    }
+
+                }
             }
 
-            docNav.Save(f4);
+            /*
 
-
-
-            //// //// merge
-            //var result = DataStore.Load<List<DiffDataElement>>("data.res");            
-            //DiffDataReader reader = new DiffDataReader(result);
-            //File.Delete(@"d:\a1.arxml");
-            //File.Copy(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml", @"d:\a1.arxml");
-            //reader.ApplyDifferencesToFile(@"d:\a1.arxml");
-
-            // Directory.Delete("config", true);
-            // ZipData.UnZip("config.zip", "c");
-            //    ZipData.UnZip("config1.zip", "result");
-            //    ZipData.UnZip("config1.zip", "c1");
-            //string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c", "*.arxml", SearchOption.AllDirectories);
-            //string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c1", "*.arxml", SearchOption.AllDirectories);
-            //string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
-
-            ////   // ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
-
-
-
-            //for (int i = 0; i < array1.Length; i++)
-            //{
-            //    if (FileCompare(array1[i], array2[i]) == false)
-            //    {
-            //        Console.WriteLine(array3[i]);
-
-            //        File.Delete(array3[i]);
-            //        using (File.Create(array3[i]))
-            //        {
-            //        }
-
-            //        CreateDiff(array1[i], array2[i], array3[i]);
-            //    }
-            //}
-
-            //        DataStore.Save(res1, array3[i]);
-            //    }
-            //}               
-            //    }
-
-            //for (int i = 0; i < array1.Length; i++)
-            //{
-            //    if (FileCompare(array1[i], array2[i]) == false)
-            //    {
-            //        var d = XDocument.Load(array3[i]);
-            //        string xPath;
-
-
-            //        Console.WriteLine("Compare complete!");
-            //        var docNav = XDocument.Load(array1[i]).Root;
-
-            //        foreach (var element in d.Root.Elements("xml_diff"))
-            //        {
-            //            // case add
-            //            if (element.Element("left_content") == null && element.Element("right_content") != null)
-            //            {
-
-            //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
-            //                var node1 = docNav.XPathSelectElement(xPath);
-
-            //                if (node1 != null && element.Element("right_content").Element("element") != null)
-            //                {
-            //                    Console.WriteLine("Add");
-            //                    //    node1.Add(element.Element("right_content").Element("element").FirstNode);
-
-            //                    try
-            //                    {
-            //                        node1.Elements().Take(int.Parse(element.Element("left_location").Element("position").Value) - 1).LastOrDefault().AddAfterSelf(element.Element("right_content").Element("element").FirstNode);
-            //                    }
-            //                    catch (Exception)
-            //                    {
-
-            //                    }
-
-            //                }
-            //            }
-
-            //            // case delete
-            //            if (element.Element("left_content") != null && element.Element("right_content") == null)
-            //            {
-
-            //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
-            //                var node1 = docNav.XPathSelectElement(xPath);
-
-            //                if (node1 != null && element.Element("left_content").Element("element") != null)
-            //                {
-            //                    Console.WriteLine("Delete");
-            //                    var nodeToDelete = element.Element("left_content").Element("element").FirstNode;
-            //                    var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
-            //                    try
-            //                    {
-            //                        nodedel.Remove();
-            //                    }
-            //                    catch (Exception)
-            //                    {
-
-            //                        //throw;
-            //                    }
-
-            //                }
-            //            }
-
-            //            // case change
-            //            if (element.Element("left_content") != null && element.Element("right_content") != null)
-            //            {
-
-            //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
-            //                var node1 = docNav.XPathSelectElement(xPath);
-
-            //                if (node1 != null && element.Element("right_content").Element("element") != null)
-            //                {
-            //                    Console.WriteLine("Change element");
-            //                    var changedNode = element.Element("right_content").Element("element").Value;
-            //                    node1.Value = changedNode;
-            //                }
-
-            //                if (node1 != null && element.Element("right_content").Element("attribute") != null)
-            //                {
-            //                    Console.WriteLine("Change attribute");
-            //                    var changedAttributes = element.Element("right_content").Element("attribute").Attributes();
-            //                    node1.RemoveAttributes();
-            //                    node1.Add(changedAttributes);
-            //                }
-
-            //                //var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
-            //                //nodedel.Remove();
-            //            }
-
-
-
-            //            //nav = docNav.CreateNavigator();
-            //            //xPath = element.Element("left_location").Element("parent").Attribute("xpath").Value;
-            //            //string value = nav.SelectSingleNode(xPath).Value;
-
-            //            //   Console.WriteLine(value);
-            //        }
-
-            //        docNav.Save(array1[i]);
-            //    }
-            //}
+                    */
         }
+
+        private static void ApplyChangedData(XElement change, XElement element)
+        {
+            // change attributes
+            var attributes = change.Attributes().Where(x => x.Name != "status");
+            foreach (var changedAttr in attributes)
+            {
+                if (changedAttr.Value.Contains('|'))
+                {
+                    var oldNew = changedAttr.Value.Split('|');
+                    element.Attribute(changedAttr.Name).Value = oldNew[1];
+                }
+            }
+
+            if (!change.HasElements && change.Value != string.Empty && change.Value.Contains('|'))
+            {
+                var oldNew = change.Value.Split('|');
+                element.Value = oldNew[1];
+            }
+        }
+
+        private static XElement FindCorrespondingElement(XElement element, XElement originalDoc, XElement changedDoc)
+        {
+            var originalElement = originalDoc.XPathSelectElement(element.AbsoluteXPath());
+            if (originalElement == null)
+            {
+                throw new NullReferenceException("value");
+            }
+
+            var valuePath = originalElement.AbsoluteXPath();
+            var foundElement = changedDoc.XPathSelectElement(valuePath);
+
+            if (foundElement != null && XNode.DeepEquals(originalElement, foundElement))
+            {
+                return foundElement;
+            }
+            else
+            {
+              //  var pathToParent = originalElement.Parent.AbsoluteXPath();
+                //var foundParent = changedDoc.XPathSelectElement(pathToParent);
+
+                var elements = changedDoc.Descendants().Where(x => XNode.DeepEquals(x, originalElement) && x.Value == originalElement.Value);
+
+                if (elements != null && elements.Count() == 1)
+                {
+                    return elements.First();
+                }
+                else
+                {
+                    throw new Exception("Not found element!");
+                }
+            }
+           
+           throw new Exception("Not found element!");            
+        }
+
+        //// //// merge
+        //var result = DataStore.Load<List<DiffDataElement>>("data.res");            
+        //DiffDataReader reader = new DiffDataReader(result);
+        //File.Delete(@"d:\a1.arxml");
+        //File.Copy(@"D:\Systems\Autosar-Merger\ConsoleApplication1\bin\Debug\config\Config\Developer\ComponentTypes\SwcBc.arxml", @"d:\a1.arxml");
+        //reader.ApplyDifferencesToFile(@"d:\a1.arxml");
+
+        // Directory.Delete("config", true);
+        // ZipData.UnZip("config.zip", "c");
+        //    ZipData.UnZip("config1.zip", "result");
+        //    ZipData.UnZip("config1.zip", "c1");
+        //string[] array1 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c", "*.arxml", SearchOption.AllDirectories);
+        //string[] array2 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\c1", "*.arxml", SearchOption.AllDirectories);
+        //string[] array3 = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\result", "*.arxml", SearchOption.AllDirectories);
+
+        ////   // ////DeleteDirectory(Directory.GetCurrentDirectory() + "\\result", true);
+
+
+
+        //for (int i = 0; i < array1.Length; i++)
+        //{
+        //    if (FileCompare(array1[i], array2[i]) == false)
+        //    {
+        //        Console.WriteLine(array3[i]);
+
+        //        File.Delete(array3[i]);
+        //        using (File.Create(array3[i]))
+        //        {
+        //        }
+
+        //        CreateDiff(array1[i], array2[i], array3[i]);
+        //    }
+        //}
+
+        //        DataStore.Save(res1, array3[i]);
+        //    }
+        //}               
+        //    }
+
+        //for (int i = 0; i < array1.Length; i++)
+        //{
+        //    if (FileCompare(array1[i], array2[i]) == false)
+        //    {
+        //        var d = XDocument.Load(array3[i]);
+        //        string xPath;
+
+
+        //        Console.WriteLine("Compare complete!");
+        //        var docNav = XDocument.Load(array1[i]).Root;
+
+        //        foreach (var element in d.Root.Elements("xml_diff"))
+        //        {
+        //            // case add
+        //            if (element.Element("left_content") == null && element.Element("right_content") != null)
+        //            {
+
+        //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
+        //                var node1 = docNav.XPathSelectElement(xPath);
+
+        //                if (node1 != null && element.Element("right_content").Element("element") != null)
+        //                {
+        //                    Console.WriteLine("Add");
+        //                    //    node1.Add(element.Element("right_content").Element("element").FirstNode);
+
+        //                    try
+        //                    {
+        //                        node1.Elements().Take(int.Parse(element.Element("left_location").Element("position").Value) - 1).LastOrDefault().AddAfterSelf(element.Element("right_content").Element("element").FirstNode);
+        //                    }
+        //                    catch (Exception)
+        //                    {
+
+        //                    }
+
+        //                }
+        //            }
+
+        //            // case delete
+        //            if (element.Element("left_content") != null && element.Element("right_content") == null)
+        //            {
+
+        //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
+        //                var node1 = docNav.XPathSelectElement(xPath);
+
+        //                if (node1 != null && element.Element("left_content").Element("element") != null)
+        //                {
+        //                    Console.WriteLine("Delete");
+        //                    var nodeToDelete = element.Element("left_content").Element("element").FirstNode;
+        //                    var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
+        //                    try
+        //                    {
+        //                        nodedel.Remove();
+        //                    }
+        //                    catch (Exception)
+        //                    {
+
+        //                        //throw;
+        //                    }
+
+        //                }
+        //            }
+
+        //            // case change
+        //            if (element.Element("left_content") != null && element.Element("right_content") != null)
+        //            {
+
+        //                xPath = AddNsTOXPath(element.Element("left_location").Element("parent").Attribute("xpath").Value);
+        //                var node1 = docNav.XPathSelectElement(xPath);
+
+        //                if (node1 != null && element.Element("right_content").Element("element") != null)
+        //                {
+        //                    Console.WriteLine("Change element");
+        //                    var changedNode = element.Element("right_content").Element("element").Value;
+        //                    node1.Value = changedNode;
+        //                }
+
+        //                if (node1 != null && element.Element("right_content").Element("attribute") != null)
+        //                {
+        //                    Console.WriteLine("Change attribute");
+        //                    var changedAttributes = element.Element("right_content").Element("attribute").Attributes();
+        //                    node1.RemoveAttributes();
+        //                    node1.Add(changedAttributes);
+        //                }
+
+        //                //var nodedel = node1.Elements().Where(x => XNode.DeepEquals(x, nodeToDelete)).FirstOrDefault();
+        //                //nodedel.Remove();
+        //            }
+
+
+
+        //            //nav = docNav.CreateNavigator();
+        //            //xPath = element.Element("left_location").Element("parent").Attribute("xpath").Value;
+        //            //string value = nav.SelectSingleNode(xPath).Value;
+
+        //            //   Console.WriteLine(value);
+        //        }
+
+        //        docNav.Save(array1[i]);
+        //    }
+        //}
+
 
         public static void DeleteDirectory(string path, bool recursive)
         {
