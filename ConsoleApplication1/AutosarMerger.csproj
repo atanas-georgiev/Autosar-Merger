@@ -107,6 +107,12 @@
     <Content Include="diff\xmldiff.exe" />
     <Content Include="diff\zlib1.dll" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AutosarData\AutosarData.csproj">
+      <Project>{0a639bad-f5f2-4b06-8c44-ffd2513d0f1d}</Project>
+      <Name>AutosarData</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

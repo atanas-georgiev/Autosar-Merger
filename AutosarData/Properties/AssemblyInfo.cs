@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("CustomXMLDiff")]
+[assembly: AssemblyTitle("AutosarData")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("CustomXMLDiff")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyCompany("Johnson Controls")]
+[assembly: AssemblyProduct("AutosarData")]
+[assembly: AssemblyCopyright("Copyright © Johnson Controls 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("9b2f8d75-543f-4f4c-9ea1-6e752f1e0e2b")]
+[assembly: Guid("0a639bad-f5f2-4b06-8c44-ffd2513d0f1d")]
 
 // Version information for an assembly consists of the following four values:
 //
